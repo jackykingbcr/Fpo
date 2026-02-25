@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v7.0</title>
+    <title>Baccarat Sniper Max v8.0</title>
     <style>
         :root {
             --bg: #000000;
@@ -30,22 +30,35 @@
             backface-visibility: hidden;
         }
 
-        #loginLayer {
+        /* 登录与设置弹窗层 */
+        .overlay-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 9999;
+            background: rgba(0, 0, 0, 0.85); z-index: 9999;
             display: flex; justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
         }
-        .login-box { width: 80%; max-width: 300px; text-align: center; }
-        .login-input {
-            width: 100%; padding: 12px; margin: 8px 0;
-            background: #222; border: 1px solid #444; color: #fff;
-            border-radius: 8px; box-sizing: border-box; font-size: 16px;
+        .modal-box { 
+            width: 85%; max-width: 320px; text-align: center; 
+            background: #1c1c1e; padding: 25px 20px; 
+            border-radius: 16px; border: 1px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
-        .login-btn {
-            width: 100%; padding: 12px; background: var(--accent);
-            color: #000; font-weight: bold; border: none;
+        .modal-input {
+            width: 100%; padding: 12px; margin: 8px 0 15px 0;
+            background: #2c2c2e; border: 1px solid #444; color: #fff;
+            border-radius: 8px; box-sizing: border-box; font-size: 15px;
+            outline: none;
+        }
+        .modal-input:focus { border-color: var(--accent); }
+        .modal-label { text-align: left; color: #aaa; font-size: 12px; font-weight: bold; margin-left: 2px; }
+        .modal-btn {
+            width: 100%; padding: 14px; background: var(--accent);
+            color: #000; font-weight: 800; border: none;
             border-radius: 8px; font-size: 16px; margin-top: 10px;
+            cursor: pointer;
         }
+        .btn-cancel { background: #444; color: #fff; }
 
         #appLayer { display: none; height: 100%; flex-direction: column; }
 
@@ -53,15 +66,22 @@
             padding: 10px 15px; background: #111;
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid var(--border);
+            position: relative;
         }
-        .app-title { font-weight: 800; font-size: 14px; color: #aaa; letter-spacing: 0.5px; }
-        .btn-group-top { display: flex; gap: 8px; }
+        .app-title { 
+            font-weight: 800; font-size: 15px; color: #aaa; letter-spacing: 0.5px; 
+            position: absolute; left: 0; width: 100%; text-align: center; 
+            pointer-events: none; z-index: 1;
+        }
+        .btn-group-top { display: flex; gap: 8px; z-index: 2; }
         .btn-small {
             background: #333; color: #ccc; border: none;
             padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold;
+            cursor: pointer;
         }
         .btn-save { color: var(--accent); }
         .btn-reset { color: var(--loss); }
+        .btn-setting { background: transparent; border: 1px solid #555; color: #fff; z-index: 2; }
 
         .dashboard { padding: 10px; background: var(--card); flex-shrink: 0; }
         .pl-display-area { text-align: center; padding: 5px 0 10px 0; }
@@ -69,14 +89,13 @@
         .pl-value { font-size: 36px; font-weight: 900; font-family: monospace; line-height: 1.1; }
         
         .comm-row { text-align: center; font-size: 12px; color: #666; margin-bottom: 10px; }
-        .comm-val { color: #888; font-weight: bold; }
-
+        
         .cum-scores-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 15px; }
         .cum-item { 
             background: #2c2c2e; border-radius: 8px; padding: 6px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .cum-label { font-size: 12px; color: #aaa; margin-bottom: 2px; font-weight: bold; }
+        .cum-label { font-size: 11px; color: #aaa; margin-bottom: 2px; font-weight: bold; text-align: center; }
         .cum-val-box { display: flex; align-items: baseline; gap: 3px; }
         .cum-val { font-size: 16px; font-weight: bold; }
         .cum-rate { font-size: 10px; color: #888; }
@@ -140,25 +159,48 @@
         .win-color { color: var(--win); }
         .loss-color { color: var(--loss); }
         .wait-color { color: #888; }
-        .round-score { font-weight: bold; font-size: 13px; }
 
     </style>
 </head>
 <body>
 
-    <div id="loginLayer">
-        <div class="login-box">
-            <h3 style="color:var(--accent); margin-bottom:20px;">狙击系统登录</h3>
-            <input type="text" id="u" class="login-input" placeholder="用户名">
-            <input type="password" id="p" class="login-input" placeholder="密码">
-            <button class="login-btn" onclick="tryLogin()">登 录</button>
+    <div id="loginLayer" class="overlay-layer">
+        <div class="modal-box">
+            <h3 style="color:var(--accent); margin-top:0; margin-bottom:20px;">系统登录</h3>
+            <input type="text" id="u" class="modal-input" placeholder="用户名">
+            <input type="password" id="p" class="modal-input" placeholder="密码">
+            <button class="modal-btn" onclick="tryLogin()">登 录</button>
             <div id="msg" style="color:var(--loss); font-size:12px; margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <div id="settingsLayer" class="overlay-layer" style="display:none;">
+        <div class="modal-box">
+            <h3 style="color:#fff; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px;">⚙️ 策略选项</h3>
+            
+            <div class="modal-label">🎯 目标触发条件 (入场时机)</div>
+            <select id="selTrigger" class="modal-input">
+                <option value="2">AA / BB 触发 (2连起步)</option>
+                <option value="3">AAA / BBB 触发 (3连起步)</option>
+            </select>
+
+            <div class="modal-label">📈 注码递增策略 (资金管理)</div>
+            <select id="selBetting" class="modal-input">
+                <option value="fib">斐波那契数列 (1, 2, 3, 5, 8...)</option>
+                <option value="martingale">马丁格尔数列 (1, 2, 4, 8, 16...)</option>
+            </select>
+
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="modal-btn btn-cancel" onclick="closeSettings()">取 消</button>
+                <button class="modal-btn" onclick="applySettings()">保存更改</button>
+            </div>
         </div>
     </div>
 
     <div id="appLayer">
         <div class="header">
-            <span class="app-title">Fibonacci Sniper v7.0</span>
+            <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
+            <span class="app-title">Sniper Pro Max v8.0</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -174,8 +216,8 @@
             <div class="comm-row" id="gameStatusLabel" style="color: var(--accent); font-size: 14px;">游戏中 - 追踪状态</div>
 
             <div class="cum-scores-row">
-                <div class="cum-item"><span class="cum-label">注码等级</span><div class="cum-val-box"><span class="cum-val" id="fibLevel">0</span></div></div>
-                <div class="cum-item"><span class="cum-label">目标属性</span><div class="cum-val-box"><span class="cum-val" id="targetProp">-</span></div></div>
+                <div class="cum-item"><span class="cum-label" id="lblFibLevel">注码(斐波)</span><div class="cum-val-box"><span class="cum-val" id="fibLevel">0</span></div></div>
+                <div class="cum-item"><span class="cum-label" id="lblTrigger">目标属性</span><div class="cum-val-box"><span class="cum-val" id="targetProp">-</span></div></div>
                 <div class="cum-item"><span class="cum-label">连击层数</span><div class="cum-val-box"><span class="cum-val" id="streakCount">0</span><span class="cum-rate">/4</span></div></div>
                 <div class="cum-item"><span class="cum-label">下注次数</span><div class="cum-val-box"><span class="cum-val" id="betCount">0</span></div></div>
             </div>
@@ -189,7 +231,7 @@
                 <div>
                     <div class="phase-text" id="phaseTag">等待开局 - 第 1 组 | 位置 1</div>
                     <div class="main-instr" id="mainInstr"><span id="instrDir" class="side-Wait">观 望</span><span id="instrAmt" style="font-size:20px; color:#fff"></span></div>
-                    <div style="font-size: 10px; color: #888; margin-top: 5px;" id="instrDetail">等待 AA 或 BB 触发...</div>
+                    <div style="font-size: 10px; color: #888; margin-top: 5px;" id="instrDetail">等待触发中...</div>
                 </div>
             </div>
 
@@ -226,38 +268,45 @@
     <script>
         const CRED = { u: 'jacky', p: '66620598' };
         
-        // 斐波那契注码表 (无限递增)
-        const FIB = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040];
+        // 斐波那契注码表 
+        const FIB = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418];
 
         let S = {
-            group: 1,           // 当前组数 (1~16)
-            hand: 1,            // 位置 (1 或 2)
-            history: [],        // 组别历史，如 ['BP', 'BB']
-            fibIdx: 0,          // 注码索引
-            streak: 0,          // 当前连击进度 (0, 2, 3, 4)
-            targetProp: null,   // 追踪目标: 'A'(对应庄B/含0), 'B'(对应闲P/含1)
-            totalPL: 0,         // 总盈亏
-            groupPL: 0,         // 当前组盈亏
-            currentH1Res: null, // 位置1的结果
-            wlHistory: [],      // 胜负历史 '✅' / '❌'
-            records: [],        // 表格记录
-            gameStatus: 'PLAYING', // PLAYING, WON, GAMEOVER
-            stack: []           // 用于撤销
+            group: 1,           
+            hand: 1,            
+            history: [],        
+            fibIdx: 0,          
+            streak: 0,          
+            targetProp: null,   
+            totalPL: 0,         
+            groupPL: 0,         
+            currentH1Res: null, 
+            wlHistory: [],      
+            records: [],        
+            gameStatus: 'PLAYING', 
+            stack: [],          
+            triggerMode: 2,      // 新增：触发模式 (2 = AA/BB, 3 = AAA/BBB)
+            bettingMode: 'fib'   // 新增：注码模式 ('fib' = 斐波那契, 'martingale' = 马丁格尔)
         };
         
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v7_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v7_session');
-                if (sessionS) S = JSON.parse(sessionS);
+            if (localStorage.getItem('bacc_v8_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v8_session');
+                if (sessionS) {
+                    S = JSON.parse(sessionS);
+                    // 兼容旧存档
+                    if(!S.triggerMode) S.triggerMode = 2;
+                    if(!S.bettingMode) S.bettingMode = 'fib';
+                }
                 enterApp();
             }
         };
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v7_logged_in', 'true');
+                localStorage.setItem('bacc_v8_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -270,36 +319,64 @@
 
         function logout() {
             if(confirm("确定要退出吗？")) {
-                localStorage.removeItem('bacc_v7_logged_in');
+                localStorage.removeItem('bacc_v8_logged_in');
                 location.reload();
             }
+        }
+
+        // --- 设置弹窗逻辑 ---
+        function openSettings() {
+            document.getElementById('selTrigger').value = S.triggerMode;
+            document.getElementById('selBetting').value = S.bettingMode;
+            document.getElementById('settingsLayer').style.display = 'flex';
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsLayer').style.display = 'none';
+        }
+
+        function applySettings() {
+            S.triggerMode = parseInt(document.getElementById('selTrigger').value);
+            S.bettingMode = document.getElementById('selBetting').value;
+            closeSettings();
+            autoSaveSession();
+            updateUI();
         }
 
         function autoSaveSession() {
             setTimeout(() => {
                 const { stack, ...dataToSave } = S; 
-                localStorage.setItem('bacc_v7_session', JSON.stringify(dataToSave));
+                localStorage.setItem('bacc_v8_session', JSON.stringify(dataToSave));
             }, 0);
         }
 
-        // 核心：判定当前动作指令
+        // --- 核心：计算当前下注金额 ---
+        function calculateBetAmount() {
+            if (S.bettingMode === 'martingale') {
+                // 马丁格尔：1, 2, 4, 8, 16... (防止越界锁定最高 2^20)
+                return Math.pow(2, Math.min(S.fibIdx, 20));
+            } else {
+                // 斐波那契：取表，超出则取最后一位
+                return S.fibIdx < FIB.length ? FIB[S.fibIdx] : FIB[FIB.length - 1];
+            }
+        }
+
+        // --- 核心：判定当前动作指令 ---
         function getInstruction() {
             if (S.gameStatus === 'WON') return { side: null, amt: 0, msg: "🎯 止盈离场！4连凑齐", detail: "游戏胜利，请重置开启新一轮" };
             if (S.gameStatus === 'GAMEOVER') return { side: null, amt: 0, msg: "🏁 16组结束", detail: "窗口耗尽，请重置" };
             if (S.group > 16) return { side: null, amt: 0, msg: "等待重置", detail: "-" };
 
-            // 保护：防止注码表越界
-            let currentAmt = S.fibIdx < FIB.length ? FIB[S.fibIdx] : FIB[FIB.length - 1];
+            let currentAmt = calculateBetAmount();
+            let triggerName = S.triggerMode === 3 ? "AAA / BBB" : "AA / BB";
 
             if (S.targetProp) {
-                // 正在追踪
                 let betSide = S.targetProp === 'A' ? 'B' : 'P';
                 let targetName = S.targetProp === 'A' ? '庄(0)' : '闲(1)';
                 
                 if (S.hand === 1) {
                     return { side: betSide, amt: currentAmt, msg: `狙击 ${targetName}`, detail: `博 ${S.targetProp.repeat(4)} 连击 (层数: ${S.streak}/4)` };
                 } else {
-                    // 处于位置2，需要看位置1是否已经命中
                     if (S.currentH1Res === betSide) {
                         return { side: null, amt: 0, msg: "观 望 (H1已中)", detail: `本组目标已达成，随便录入推进进度` };
                     } else {
@@ -307,7 +384,7 @@
                     }
                 }
             } else {
-                return { side: null, amt: 0, msg: "观 望", detail: "等待 AA 或 BB 触发中..." };
+                return { side: null, amt: 0, msg: "观 望", detail: `等待 ${triggerName} 触发中...` };
             }
         }
 
@@ -340,21 +417,18 @@
                     S.totalPL -= instr.amt;
                     S.groupPL -= instr.amt;
                 }
-                S.fibIdx++; // 只要出手，必定推进一步注码
+                S.fibIdx++; // 出手即递增
                 actionText = `打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`;
             }
 
-            // 状态机流转
             if (S.hand === 1) {
                 S.currentH1Res = res;
                 S.hand = 2;
-                // 添加半条记录用于UI显示
                 S.records.unshift({ id: S.group, h1: res, h2: '-', action: actionText, pl: S.groupPL, totalPL: S.totalPL, isComplete: false });
             } else {
                 let groupRes = S.currentH1Res + res;
                 S.history.push(groupRes);
 
-                // 更新完整记录
                 if(S.records.length > 0 && !S.records[0].isComplete) {
                     S.records[0].h2 = res;
                     S.records[0].action += (instr.amt>0 ? `<br>打${instr.side==='B'?'0':'1'} [${instr.amt}] ${instr.side===res?'胜':'负'}` : `<br>观望`);
@@ -363,43 +437,43 @@
                     S.records[0].isComplete = true;
                 }
 
-                // --- 核心组逻辑判定 ---
-                // A属性: 含B(0); B属性: 含P(1)
+                // --- 链条与组属性判定 ---
                 let hasA = groupRes.includes('B');
                 let hasB = groupRes.includes('P');
 
                 if (S.targetProp) {
-                    // 处于追踪状态，检验组属性是否续航
                     if ((S.targetProp === 'A' && hasA) || (S.targetProp === 'B' && hasB)) {
                         S.streak++;
                         if (S.streak >= 4) {
-                            S.gameStatus = 'WON'; // 成功触发强制止盈！
+                            S.gameStatus = 'WON'; 
                         }
                     } else {
-                        // 链条断裂，重置目标
+                        // 断裂，重置
                         S.targetProp = null;
                         S.streak = 0;
                     }
                 }
 
-                // 如果链条断裂或原本就在观望，检查是否产生新触发
-                if (!S.targetProp && S.gameStatus === 'PLAYING' && S.history.length >= 2) {
-                    let last1 = S.history[S.history.length - 1];
-                    let last2 = S.history[S.history.length - 2];
-                    
-                    let l1A = last1.includes('B'), l2A = last2.includes('B');
-                    let l1B = last1.includes('P'), l2B = last2.includes('P');
+                // --- 动态触发检测 (支持 2连 或 3连) ---
+                let tLen = S.triggerMode;
+                if (!S.targetProp && S.gameStatus === 'PLAYING' && S.history.length >= tLen) {
+                    let isAllA = true, isAllB = true;
+                    // 向前回溯 tLen 个组，检查是否全部满足属性
+                    for(let i = 1; i <= tLen; i++) {
+                        let h = S.history[S.history.length - i];
+                        if(!h.includes('B')) isAllA = false;
+                        if(!h.includes('P')) isAllB = false;
+                    }
 
-                    if (l1A && l2A) {
+                    if (isAllA) {
                         S.targetProp = 'A';
-                        S.streak = 2;
-                    } else if (l1B && l2B) {
+                        S.streak = tLen;
+                    } else if (isAllB) {
                         S.targetProp = 'B';
-                        S.streak = 2;
+                        S.streak = tLen;
                     }
                 }
 
-                // 推进组数
                 S.group++;
                 S.hand = 1;
                 S.currentH1Res = null;
@@ -431,7 +505,6 @@
                 const losses = S.wlHistory.filter(x => x === '❌').length;
                 const winRate = (wins + losses) > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
                 
-                // 顶部状态
                 document.getElementById('totalPL').innerText = (S.totalPL > 0 ? "+" : "") + S.totalPL;
                 document.getElementById('totalPL').className = S.totalPL > 0 ? 'pl-value win-color' : (S.totalPL < 0 ? 'pl-value loss-color' : 'pl-value');
                 
@@ -440,7 +513,10 @@
                 else if(S.gameStatus === 'GAMEOVER') { statusLabel.innerText = "⚠️ 游戏结束 - 16组窗口耗尽"; statusLabel.style.color = "var(--loss)"; }
                 else { statusLabel.innerText = "🟢 游戏中 - 动态追踪模式"; statusLabel.style.color = "var(--accent)"; }
 
-                // 仪表盘数据
+                // 动态更新仪表盘的标签名称
+                document.getElementById('lblFibLevel').innerText = S.bettingMode === 'martingale' ? '注码(马丁)' : '注码(斐波)';
+                document.getElementById('lblTrigger').innerText = S.triggerMode === 3 ? '目标(3连触发)' : '目标(2连触发)';
+
                 document.getElementById('fibLevel').innerText = S.fibIdx;
                 document.getElementById('targetProp').innerText = S.targetProp ? (S.targetProp==='A'?'A (打0)':'B (打1)') : "无";
                 document.getElementById('targetProp').className = S.targetProp ? (S.targetProp==='A'?'cum-val side-B':'cum-val side-P') : 'cum-val wait-color';
@@ -448,7 +524,6 @@
                 document.getElementById('streakCount').className = S.streak >= 4 ? 'cum-val win-color' : 'cum-val';
                 document.getElementById('betCount').innerText = (wins + losses);
 
-                // 进度条 (基于16组窗口)
                 let progress = Math.min((S.group - 1 + (S.hand===2?0.5:0)) / 16 * 100, 100);
                 document.getElementById('regFill').style.width = progress + '%';
                 document.getElementById('regPercent').innerText = Math.floor(progress) + '%';
@@ -458,7 +533,6 @@
                 wlList.innerHTML = S.wlHistory.map(item => `<span class="${item==='✅'?'wl-item-win':'wl-item-loss'}">${item}</span>`).join('');
                 wlList.scrollTop = wlList.scrollHeight;
 
-                // 指令区渲染
                 let instr = getInstruction();
                 document.getElementById('phaseTag').innerText = `第 ${Math.min(S.group, 16)} 组 | 位置 ${S.hand}`;
                 
@@ -474,7 +548,6 @@
                 }
                 document.getElementById('instrDetail').innerText = instr.detail;
 
-                // 历史表格渲染
                 let html = "";
                 for(let i=0; i<S.records.length; i++) {
                     let rec = S.records[i];
@@ -492,14 +565,14 @@
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
             let saveObj = { id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData };
-            let hist = JSON.parse(localStorage.getItem('bacc_v7_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v8_hist')||'[]');
             hist.unshift(saveObj);
-            localStorage.setItem('bacc_v7_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v8_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         function resetGame() { 
             if(confirm("确定要重置并开启新的16组窗口吗？")) { 
-                localStorage.removeItem('bacc_v7_session'); 
+                localStorage.removeItem('bacc_v8_session'); 
                 location.reload(); 
             } 
         }
