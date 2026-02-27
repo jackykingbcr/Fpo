@@ -453,4 +453,137 @@
 
                 // --- 动态触发检测 (支持 2连 或 3连) ---
                 let tLen = S.triggerMode;
-                if (!S.targetProp && S.gameStatus === 'PLAYING' && S.history.lengt
+                if (!S.targetProp && S.gameStatus === 'PLAYING' && S.history.length >= tLen) {
+                    let isAllA = true, isAllB = true;
+                    for(let i = 1; i <= tLen; i++) {
+                        let h = S.history[S.history.length - i];
+                        if(!h.includes('B')) isAllA = false;
+                        if(!h.includes('P')) isAllB = false;
+                    }
+
+                    if (isAllA) {
+                        S.targetProp = 'A';
+                        S.streak = tLen;
+                    } else if (isAllB) {
+                        S.targetProp = 'B';
+                        S.streak = tLen;
+                    }
+                }
+
+                S.group++;
+                S.hand = 1;
+                S.currentH1Res = null;
+                S.groupPL = 0;
+
+                if (S.group > 16 && S.gameStatus === 'PLAYING') {
+                    S.gameStatus = 'GAMEOVER';
+                }
+            }
+            
+            autoSaveSession();
+            updateUI();
+            setTimeout(() => { isProcessing = false; }, 50); 
+        }
+
+        function undo() {
+            if (S.stack.length > 0) {
+                const lastStack = S.stack;
+                S = JSON.parse(S.stack.pop());
+                S.stack = lastStack;
+                autoSaveSession();
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            window.requestAnimationFrame(() => {
+                const wins = S.wlHistory.filter(x => x === '✅').length;
+                const losses = S.wlHistory.filter(x => x === '❌').length;
+                const winRate = (wins + losses) > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
+                
+                document.getElementById('totalPL').innerText = (S.totalPL > 0 ? "+" : "") + S.totalPL;
+                document.getElementById('totalPL').className = S.totalPL > 0 ? 'pl-value win-color' : (S.totalPL < 0 ? 'pl-value loss-color' : 'pl-value');
+                
+                let statusLabel = document.getElementById('gameStatusLabel');
+                if(S.gameStatus === 'WON') { statusLabel.innerText = "🎉 挑战成功 - 已触发4连止盈离场"; statusLabel.style.color = "var(--win)"; }
+                else if(S.gameStatus === 'GAMEOVER') { statusLabel.innerText = "⚠️ 游戏结束 - 16组窗口耗尽"; statusLabel.style.color = "var(--loss)"; }
+                else { statusLabel.innerText = "🟢 游戏中 - 动态追踪模式"; statusLabel.style.color = "var(--accent)"; }
+
+                document.getElementById('lblFibLevel').innerText = S.bettingMode === 'martingale' ? '注码(马丁)' : '注码(斐波)';
+                document.getElementById('lblTrigger').innerText = S.triggerMode === 3 ? '目标(3连触发)' : '目标(2连触发)';
+
+                document.getElementById('fibLevel').innerText = S.fibIdx;
+                document.getElementById('targetProp').innerText = S.targetProp ? (S.targetProp==='A'?'A (打0)':'B (打1)') : "无";
+                document.getElementById('targetProp').className = S.targetProp ? (S.targetProp==='A'?'cum-val side-B':'cum-val side-P') : 'cum-val wait-color';
+                document.getElementById('streakCount').innerText = S.streak;
+                document.getElementById('streakCount').className = S.streak >= 4 ? 'cum-val win-color' : 'cum-val';
+                document.getElementById('betCount').innerText = (wins + losses);
+
+                let progress = Math.min((S.group - 1 + (S.hand===2?0.5:0)) / 16 * 100, 100);
+                document.getElementById('regFill').style.width = progress + '%';
+                document.getElementById('regPercent').innerText = Math.floor(progress) + '%';
+
+                document.getElementById('wlStatsText').innerText = `胜: ${wins} | 负: ${losses} | 胜率: ${winRate}%`;
+                const wlList = document.getElementById('wlList');
+                wlList.innerHTML = S.wlHistory.map(item => `<span class="${item==='✅'?'wl-item-win':'wl-item-loss'}">${item}</span>`).join('');
+                wlList.scrollTop = wlList.scrollHeight;
+
+                let instr = getInstruction();
+                document.getElementById('phaseTag').innerText = `第 ${Math.min(S.group, 16)} 组 | 位置 ${S.hand}`;
+                
+                let dir = document.getElementById('instrDir');
+                if (instr.amt === 0) { 
+                    dir.innerText = instr.msg; 
+                    dir.className = "side-Wait"; 
+                    document.getElementById('instrAmt').innerText = ""; 
+                } else {
+                    dir.innerText = instr.side === 'B' ? "庄(0)" : "闲(1)";
+                    dir.className = instr.side === 'B' ? "side-B" : "side-P";
+                    document.getElementById('instrAmt').innerText = instr.amt;
+                }
+                document.getElementById('instrDetail').innerText = instr.detail;
+
+                let html = "";
+                for(let i=0; i<S.records.length; i++) {
+                    let rec = S.records[i];
+                    html += `<tr>
+                        <td>G${rec.id}</td>
+                        <td style="font-weight:bold; color:#fff">${rec.h1 === 'B' ? '0' : (rec.h1 === 'P' ? '1' : '-')} , ${rec.h2 === 'B' ? '0' : (rec.h2 === 'P' ? '1' : '-')}</td>
+                        <td class="${rec.pl>0?'win-color':(rec.pl<0?'loss-color':'wait-color')}" style="font-size:11px">${rec.action || '-'}</td>
+                        <td class="${rec.totalPL>0?'win-color':(rec.totalPL<0?'loss-color':'wait-color')}" style="font-weight:bold">${rec.totalPL>0?'+':''}${rec.totalPL}</td>
+                    </tr>`;
+                }
+                document.getElementById('gameTable').innerHTML = html;
+            });
+        }
+
+        function saveGame(showMsg=false) {
+            const { stack, ...saveData } = S;
+            let saveObj = { id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData };
+            let hist = JSON.parse(localStorage.getItem('bacc_v8_hist')||'[]');
+            hist.unshift(saveObj);
+            localStorage.setItem('bacc_v8_hist', JSON.stringify(hist.slice(0, 50)));
+            if(showMsg) alert("保存成功！");
+        }
+        
+        // --- 核心修复：无感刷新重置，解决退回登录界面Bug ---
+        function resetGame() { 
+            if(confirm("确定要重置并开启新的16组窗口吗？")) { 
+                S = {
+                    group: 1, hand: 1, history: [], fibIdx: 0, streak: 0,
+                    targetProp: null, totalPL: 0, groupPL: 0, currentH1Res: null,
+                    wlHistory: [], records: [], gameStatus: 'PLAYING', stack: [],
+                    triggerMode: S.triggerMode,  // 继承设定的触发模式
+                    bettingMode: S.bettingMode   // 继承设定的注码模式
+                };
+                
+                const { stack, ...dataToSave } = S;
+                localStorage.setItem('bacc_v8_session', JSON.stringify(dataToSave));
+                
+                // 直接更新UI，不再重新加载网页
+                updateUI(); 
+            } 
+        }
+    </script>
+</body>
+</html>
