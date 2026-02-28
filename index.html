@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v9.0</title>
+    <title>Baccarat Sniper Max v8.5</title>
     <style>
         :root {
             --bg: #000000;
@@ -47,11 +47,11 @@
         .modal-input {
             width: 100%; padding: 12px; margin: 8px 0 15px 0;
             background: #2c2c2e; border: 1px solid #444; color: #fff;
-            border-radius: 8px; box-sizing: border-box; font-size: 14px;
+            border-radius: 8px; box-sizing: border-box; font-size: 15px;
             outline: none;
         }
         .modal-input:focus { border-color: var(--accent); }
-        .modal-label { text-align: left; color: #aaa; font-size: 12px; font-weight: bold; margin-left: 2px; }
+        .modal-label { text-align: left; color: #aaa; font-size: 13px; font-weight: bold; margin-left: 2px; margin-bottom: 5px; }
         .modal-btn {
             width: 100%; padding: 14px; background: var(--accent);
             color: #000; font-weight: 800; border: none;
@@ -176,22 +176,20 @@
 
     <div id="settingsLayer" class="overlay-layer" style="display:none;">
         <div class="modal-box">
-            <h3 style="color:#fff; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px;">⚙️ 策略选项</h3>
+            <h3 style="color:#fff; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px;">⚙️ 战术套餐设置</h3>
             
-            <div class="modal-label">🎯 目标触发条件 (入场时机)</div>
-            <select id="selTrigger" class="modal-input">
-                <option value="2">AA / BB 触发 (2连起步)</option>
-                <option value="3">AAA / BBB 触发 (3连起步)</option>
+            <div class="modal-label">⚔️ 一键切换战术组</div>
+            <select id="selStrategy" class="modal-input">
+                <option value="2_fib">套餐 1：2连触发 (AA/BB) + 斐波那契</option>
+                <option value="3_martingale">套餐 2：3连触发 (AAA/BBB) + 马丁格尔</option>
             </select>
 
-            <div class="modal-label">📈 注码递增策略 (资金管理)</div>
-            <select id="selBetting" class="modal-input">
-                <option value="fib">斐波那契数列 (1, 2, 3, 5, 8...)</option>
-                <option value="martingale">马丁格尔数列 (1, 2, 4, 8, 16...)</option>
-                <option value="labouchere">拉布谢尔消数法 (头尾相加/去首末)</option>
-            </select>
+            <div style="font-size: 11px; color: #888; text-align: left; margin-top: 5px; line-height: 1.4;">
+                * 套餐1：高频触发，遇震荡缓慢拉升。<br>
+                * 套餐2：低频防御，一击必杀强制回本。
+            </div>
 
-            <div style="display:flex; gap:10px; margin-top:10px;">
+            <div style="display:flex; gap:10px; margin-top:20px;">
                 <button class="modal-btn btn-cancel" onclick="closeSettings()">取 消</button>
                 <button class="modal-btn" onclick="applySettings()">保存更改</button>
             </div>
@@ -201,7 +199,7 @@
     <div id="appLayer">
         <div class="header">
             <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
-            <span class="app-title">Sniper Pro Max v9.0</span>
+            <span class="app-title">Sniper Pro Max v8.5</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -217,7 +215,7 @@
             <div class="comm-row" id="gameStatusLabel" style="color: var(--accent); font-size: 14px;">游戏中 - 追踪状态</div>
 
             <div class="cum-scores-row">
-                <div class="cum-item"><span class="cum-label" id="lblFibLevel">注码进度</span><div class="cum-val-box"><span class="cum-val" id="fibLevel">0</span></div></div>
+                <div class="cum-item"><span class="cum-label" id="lblFibLevel">注码(斐波)</span><div class="cum-val-box"><span class="cum-val" id="fibLevel">0</span></div></div>
                 <div class="cum-item"><span class="cum-label" id="lblTrigger">目标属性</span><div class="cum-val-box"><span class="cum-val" id="targetProp">-</span></div></div>
                 <div class="cum-item"><span class="cum-label">连击层数</span><div class="cum-val-box"><span class="cum-val" id="streakCount">0</span><span class="cum-rate">/4</span></div></div>
                 <div class="cum-item"><span class="cum-label">下注次数</span><div class="cum-val-box"><span class="cum-val" id="betCount">0</span></div></div>
@@ -277,7 +275,6 @@
             hand: 1,            
             history: [],        
             fibIdx: 0,          
-            labouchereSeq: [1, 2, 3], // 新增：拉布谢尔初始序列
             streak: 0,          
             targetProp: null,   
             totalPL: 0,         
@@ -287,20 +284,19 @@
             records: [],        
             gameStatus: 'PLAYING', 
             stack: [],          
-            triggerMode: 2,     
+            triggerMode: 2,      // 底层仍保留独立参数，但由套餐控制
             bettingMode: 'fib'   
         };
         
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v9_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v9_session');
+            if (localStorage.getItem('bacc_v85_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v85_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2;
                     if(!S.bettingMode) S.bettingMode = 'fib';
-                    if(!S.labouchereSeq) S.labouchereSeq = [1, 2, 3];
                 }
                 enterApp();
             }
@@ -308,7 +304,7 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v9_logged_in', 'true');
+                localStorage.setItem('bacc_v85_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -321,15 +317,15 @@
 
         function logout() {
             if(confirm("确定要退出吗？")) {
-                localStorage.removeItem('bacc_v9_logged_in');
+                localStorage.removeItem('bacc_v85_logged_in');
                 location.reload();
             }
         }
 
-        // --- 设置弹窗逻辑 ---
+        // --- 设置弹窗逻辑 (整合套餐解析) ---
         function openSettings() {
-            document.getElementById('selTrigger').value = S.triggerMode;
-            document.getElementById('selBetting').value = S.bettingMode;
+            // 根据当前底层状态反推套餐选项
+            document.getElementById('selStrategy').value = S.triggerMode + '_' + S.bettingMode;
             document.getElementById('settingsLayer').style.display = 'flex';
         }
 
@@ -338,8 +334,10 @@
         }
 
         function applySettings() {
-            S.triggerMode = parseInt(document.getElementById('selTrigger').value);
-            S.bettingMode = document.getElementById('selBetting').value;
+            let comboValue = document.getElementById('selStrategy').value.split('_');
+            S.triggerMode = parseInt(comboValue[0]); // 解析触发模式 (2或3)
+            S.bettingMode = comboValue[1];           // 解析注码模式 (fib或martingale)
+            
             closeSettings();
             autoSaveSession();
             updateUI();
@@ -348,19 +346,14 @@
         function autoSaveSession() {
             setTimeout(() => {
                 const { stack, ...dataToSave } = S; 
-                localStorage.setItem('bacc_v9_session', JSON.stringify(dataToSave));
+                localStorage.setItem('bacc_v85_session', JSON.stringify(dataToSave));
             }, 0);
         }
 
         // --- 核心：计算当前下注金额 ---
         function calculateBetAmount() {
             if (S.bettingMode === 'martingale') {
-                return Math.pow(2, Math.min(S.fibIdx, 20));
-            } else if (S.bettingMode === 'labouchere') {
-                let seq = S.labouchereSeq;
-                if (seq.length === 0) return 0; // 防护
-                if (seq.length === 1) return seq[0];
-                return seq[0] + seq[seq.length - 1]; // 头尾相加
+                return Math.pow(2, Math.min(S.fibIdx, 20)); // 防止马丁格尔爆炸，上限锁20层
             } else {
                 return S.fibIdx < FIB.length ? FIB[S.fibIdx] : FIB[FIB.length - 1];
             }
@@ -402,6 +395,7 @@
                 return;
             }
 
+            // 保存状态用于Undo
             const { stack, ...snapshotData } = S;
             S.stack.push(JSON.stringify(snapshotData));
             if (S.stack.length > 20) S.stack.shift(); 
@@ -416,29 +410,12 @@
                     S.wlHistory.push('✅');
                     S.totalPL += instr.amt;
                     S.groupPL += instr.amt;
-                    
-                    // 赢了的处理逻辑
-                    if (S.bettingMode === 'labouchere') {
-                        S.labouchereSeq.shift(); // 掐头
-                        if (S.labouchereSeq.length > 0) S.labouchereSeq.pop(); // 去尾
-                        if (S.labouchereSeq.length === 0) S.labouchereSeq = [1, 2, 3]; // 消除完毕，重新生成序列
-                    }
                 } else {
                     S.wlHistory.push('❌');
                     S.totalPL -= instr.amt;
                     S.groupPL -= instr.amt;
-                    
-                    // 输了的处理逻辑
-                    if (S.bettingMode === 'labouchere') {
-                        S.labouchereSeq.push(instr.amt); // 把输掉的数加到末尾
-                    }
                 }
-                
-                // 只有斐波那契和马丁格尔需要暴力递增 index
-                if (S.bettingMode !== 'labouchere') {
-                    S.fibIdx++; 
-                }
-                
+                S.fibIdx++; // 出手即递增
                 actionText = `打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`;
             }
 
@@ -466,14 +443,16 @@
                     if ((S.targetProp === 'A' && hasA) || (S.targetProp === 'B' && hasB)) {
                         S.streak++;
                         if (S.streak >= 4) {
-                            S.gameStatus = 'WON'; 
+                            S.gameStatus = 'WON'; // 凑齐4连，触发止盈离场（因剔除了拉布谢尔，此处绝对保证盈利）
                         }
                     } else {
+                        // 断裂，重置
                         S.targetProp = null;
                         S.streak = 0;
                     }
                 }
 
+                // --- 动态触发检测 (支持 2连 或 3连) ---
                 let tLen = S.triggerMode;
                 if (!S.targetProp && S.gameStatus === 'PLAYING' && S.history.length >= tLen) {
                     let isAllA = true, isAllB = true;
@@ -531,16 +510,11 @@
                 else if(S.gameStatus === 'GAMEOVER') { statusLabel.innerText = "⚠️ 游戏结束 - 16组窗口耗尽"; statusLabel.style.color = "var(--loss)"; }
                 else { statusLabel.innerText = "🟢 游戏中 - 动态追踪模式"; statusLabel.style.color = "var(--accent)"; }
 
-                // 动态更新不同注码模式下的面板显示
-                if (S.bettingMode === 'labouchere') {
-                    document.getElementById('lblFibLevel').innerText = '消数余量';
-                    document.getElementById('fibLevel').innerText = S.labouchereSeq.length; // 显示剩余几项没被划掉
-                } else {
-                    document.getElementById('lblFibLevel').innerText = S.bettingMode === 'martingale' ? '注码(马丁)' : '注码(斐波)';
-                    document.getElementById('fibLevel').innerText = S.fibIdx;
-                }
-
+                // 面板显示根据底层状态自适应
+                document.getElementById('lblFibLevel').innerText = S.bettingMode === 'martingale' ? '注码(马丁)' : '注码(斐波)';
                 document.getElementById('lblTrigger').innerText = S.triggerMode === 3 ? '目标(3连触发)' : '目标(2连触发)';
+
+                document.getElementById('fibLevel').innerText = S.fibIdx;
                 document.getElementById('targetProp').innerText = S.targetProp ? (S.targetProp==='A'?'A (打0)':'B (打1)') : "无";
                 document.getElementById('targetProp').className = S.targetProp ? (S.targetProp==='A'?'cum-val side-B':'cum-val side-P') : 'cum-val wait-color';
                 document.getElementById('streakCount').innerText = S.streak;
@@ -588,26 +562,27 @@
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
             let saveObj = { id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData };
-            let hist = JSON.parse(localStorage.getItem('bacc_v9_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v85_hist')||'[]');
             hist.unshift(saveObj);
-            localStorage.setItem('bacc_v9_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v85_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
+        // --- 无感刷新重置，绝对不跳回登录页 ---
         function resetGame() { 
             if(confirm("确定要重置并开启新的16组窗口吗？")) { 
                 S = {
-                    group: 1, hand: 1, history: [], fibIdx: 0, 
-                    labouchereSeq: [1, 2, 3], // 新增：重置时恢复初始序列
-                    streak: 0, targetProp: null, totalPL: 0, groupPL: 0, currentH1Res: null,
+                    group: 1, hand: 1, history: [], fibIdx: 0, streak: 0,
+                    targetProp: null, totalPL: 0, groupPL: 0, currentH1Res: null,
                     wlHistory: [], records: [], gameStatus: 'PLAYING', stack: [],
-                    triggerMode: S.triggerMode,  
-                    bettingMode: S.bettingMode   
+                    triggerMode: S.triggerMode,  // 继承设定的触发模式
+                    bettingMode: S.bettingMode   // 继承设定的注码模式
                 };
                 
                 const { stack, ...dataToSave } = S;
-                localStorage.setItem('bacc_v9_session', JSON.stringify(dataToSave));
+                localStorage.setItem('bacc_v85_session', JSON.stringify(dataToSave));
                 
+                // 直接更新UI，不再重新加载网页
                 updateUI(); 
             } 
         }
