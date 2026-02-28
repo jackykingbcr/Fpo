@@ -188,7 +188,7 @@
             <div style="font-size: 11px; color: #888; text-align: left; margin-top: 5px; line-height: 1.4;">
                 * 套餐1：高频触发，遇震荡缓慢拉升。<br>
                 * 套餐2：低频防御，一击必杀强制回本。<br>
-                * 套餐3：流水线两步拦截，无限重置循环。
+                * 套餐3：流水线两步拦截，只要盈利即止盈。
             </div>
 
             <div style="display:flex; gap:10px; margin-top:20px;">
@@ -287,9 +287,9 @@
             stack: [],          
             triggerMode: 2,     
             bettingMode: 'fib',
-            flatHistory: [],    // 套餐3专属：连续记录
-            s3State: 'PHASE1',  // 套餐3专属：当前拦截阶段 (PHASE1, PHASE2, PHASE3)
-            s3Target: null      // 套餐3专属：当前拦截目标
+            flatHistory: [],    
+            s3State: 'PHASE1',  
+            s3Target: null      
         };
         
         let isProcessing = false;
@@ -343,7 +343,6 @@
             let newTrig = trig === 'hand' ? 'hand' : parseInt(trig);
             let newBet = comboValue[1];
             
-            // 如果切换了套餐，为了防止逻辑崩溃，强制无感重置当前对局
             if (S.triggerMode !== newTrig || S.bettingMode !== newBet) {
                 S.triggerMode = newTrig;
                 S.bettingMode = newBet;
@@ -371,13 +370,12 @@
         }
 
         function getInstruction() {
-            if (S.gameStatus === 'WON') return { side: null, amt: 0, msg: "🎯 止盈离场！4连凑齐", detail: "游戏胜利，请重置开启新一轮" };
+            if (S.gameStatus === 'WON') return { side: null, amt: 0, msg: "🎯 止盈离场！", detail: "达成盈利收网，请重置开启新一局" };
             if (S.gameStatus === 'GAMEOVER') return { side: null, amt: 0, msg: "🏁 16组结束", detail: "窗口耗尽，请重置" };
             if (S.triggerMode !== 'hand' && S.group > 16) return { side: null, amt: 0, msg: "等待重置", detail: "-" };
 
             let currentAmt = calculateBetAmount();
 
-            // 套餐3：连续手拦截专属逻辑
             if (S.triggerMode === 'hand') {
                 if (S.s3State === 'PHASE2') {
                     return { side: S.s3Target, amt: currentAmt, msg: `一裁抓 ${S.s3Target==='B'?'000':'111'}`, detail: `顺势拦截：打 ${S.s3Target==='B'?'0':'1'}` };
@@ -388,7 +386,6 @@
                 }
             }
 
-            // 套餐1 & 2：组逻辑
             let triggerName = S.triggerMode === 3 ? "AAA / BBB" : "AA / BB";
             if (S.targetProp) {
                 let betSide = S.targetProp === 'A' ? 'B' : 'P';
@@ -437,6 +434,11 @@
                         S.fibIdx = 0; 
                         S.s3State = 'PHASE1';
                         S.s3Target = null;
+                        
+                        // 【核心更新】：只要盈利了就触发止盈离场状态
+                        if (S.totalPL > 0) {
+                            S.gameStatus = 'WON';
+                        }
                     }
                 } else {
                     S.wlHistory.push('❌');
@@ -522,14 +524,15 @@
                 S.currentH1Res = null;
                 S.groupPL = 0;
 
-                // 套餐3没有轮数限制，永远在 PLAYING 状态
+                // 套餐3没有轮数限制
                 if (S.triggerMode !== 'hand' && S.group > 16 && S.gameStatus === 'PLAYING') {
                     S.gameStatus = 'GAMEOVER';
                 }
             }
 
             // ==== 第三步：处理 套餐3 (阶段1触发判定) ====
-            if (S.triggerMode === 'hand' && S.s3State === 'PHASE1' && S.flatHistory.length >= 2) {
+            // 只有当游戏还在进行中时，才继续寻找新触发
+            if (S.gameStatus === 'PLAYING' && S.triggerMode === 'hand' && S.s3State === 'PHASE1' && S.flatHistory.length >= 2) {
                 let last2 = S.flatHistory.slice(-2);
                 if (last2[0] === 'B' && last2[1] === 'B') {
                     S.s3State = 'PHASE2';
@@ -566,8 +569,13 @@
                 
                 let statusLabel = document.getElementById('gameStatusLabel');
                 if (S.triggerMode === 'hand') {
-                    statusLabel.innerText = "🟢 套餐3运行中 - 连续流水线拦截"; 
-                    statusLabel.style.color = "var(--accent)";
+                    if (S.gameStatus === 'WON') {
+                        statusLabel.innerText = "🎉 挑战成功 - 盈利收网离场"; 
+                        statusLabel.style.color = "var(--win)";
+                    } else {
+                        statusLabel.innerText = "🟢 套餐3运行中 - 连续流水线拦截"; 
+                        statusLabel.style.color = "var(--accent)";
+                    }
                 } else {
                     if(S.gameStatus === 'WON') { statusLabel.innerText = "🎉 挑战成功 - 已触发4连止盈离场"; statusLabel.style.color = "var(--win)"; }
                     else if(S.gameStatus === 'GAMEOVER') { statusLabel.innerText = "⚠️ 游戏结束 - 16组窗口耗尽"; statusLabel.style.color = "var(--loss)"; }
@@ -590,10 +598,17 @@
                     document.getElementById('streakCount').className = S.s3Target ? (S.s3Target==='B'?'cum-val side-B':'cum-val side-P') : 'cum-val';
                     document.getElementById('streakRate').style.display = 'none';
 
-                    document.getElementById('lblProgress').innerText = '连续手追踪模式 (INFINITE)';
-                    document.getElementById('regFill').style.width = '100%';
-                    document.getElementById('regFill').style.background = 'linear-gradient(90deg, #0a84ff 0%, #32d74b 100%)';
-                    document.getElementById('regPercent').innerText = '无限循环';
+                    if (S.gameStatus === 'WON') {
+                        document.getElementById('lblProgress').innerText = '连续手追踪模式 (WON)';
+                        document.getElementById('regPercent').innerText = '已止盈';
+                        document.getElementById('regFill').style.width = '100%';
+                        document.getElementById('regFill').style.background = 'var(--win)';
+                    } else {
+                        document.getElementById('lblProgress').innerText = '连续手追踪模式 (INFINITE)';
+                        document.getElementById('regPercent').innerText = '无限循环';
+                        document.getElementById('regFill').style.width = '100%';
+                        document.getElementById('regFill').style.background = 'linear-gradient(90deg, #0a84ff 0%, #32d74b 100%)';
+                    }
                 } else {
                     // 套餐 1 & 2 界面恢复
                     document.getElementById('lblTrigger').innerText = S.triggerMode === 3 ? '目标(3连触发)' : '目标(2连触发)';
@@ -619,7 +634,7 @@
                 wlList.scrollTop = wlList.scrollHeight;
 
                 let instr = getInstruction();
-                let infTag = S.triggerMode === 'hand' ? ' (无限局)' : '';
+                let infTag = S.triggerMode === 'hand' ? ' (无限)' : '';
                 document.getElementById('phaseTag').innerText = `第 ${S.triggerMode==='hand'?S.group:Math.min(S.group, 16)} 组 | 位置 ${S.hand}${infTag}`;
                 
                 let dir = document.getElementById('instrDir');
