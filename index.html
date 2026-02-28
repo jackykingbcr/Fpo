@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v9.0</title>
+    <title>Baccarat Sniper Max v9.5 (稳定版)</title>
     <style>
         :root {
             --bg: #000000;
@@ -28,9 +28,10 @@
             overflow: hidden;
             transform: translateZ(0);
             backface-visibility: hidden;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
-        /* 登录与设置弹窗层 */
         .overlay-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.85); z-index: 9999;
@@ -141,6 +142,8 @@
             box-shadow: 0 4px 0 rgba(0,0,0,0.3);
             transition: transform 0.1s;
             cursor: pointer;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
         }
         .bg-b { background: var(--banker-bg); }
         .bg-p { background: var(--player-bg); }
@@ -201,7 +204,7 @@
     <div id="appLayer">
         <div class="header">
             <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
-            <span class="app-title">Sniper Pro Max v9.0</span>
+            <span class="app-title">Sniper Pro Max v9.5</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -237,7 +240,7 @@
             </div>
 
             <div class="wl-container">
-                <div class="wl-stats"><span>下注记录 (1:1赔率)</span><span id="wlStatsText">胜: 0 | 负: 0 | 胜率: 0%</span></div>
+                <div class="wl-stats"><span>下注记录 (只显最新150条)</span><span id="wlStatsText">胜: 0 | 负: 0 | 胜率: 0%</span></div>
                 <div class="wl-list" id="wlList"></div>
             </div>
 
@@ -295,8 +298,8 @@
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v9_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v9_session');
+            if (localStorage.getItem('bacc_v95_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v95_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2;
@@ -310,7 +313,7 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v9_logged_in', 'true');
+                localStorage.setItem('bacc_v95_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -323,7 +326,7 @@
 
         function logout() {
             if(confirm("确定要退出吗？")) {
-                localStorage.removeItem('bacc_v9_logged_in');
+                localStorage.removeItem('bacc_v95_logged_in');
                 location.reload();
             }
         }
@@ -357,7 +360,7 @@
         function autoSaveSession() {
             setTimeout(() => {
                 const { stack, ...dataToSave } = S; 
-                localStorage.setItem('bacc_v9_session', JSON.stringify(dataToSave));
+                localStorage.setItem('bacc_v95_session', JSON.stringify(dataToSave));
             }, 0);
         }
 
@@ -409,143 +412,136 @@
             if (isProcessing) return; 
             isProcessing = true;
 
-            if (S.gameStatus !== 'PLAYING' && S.group > 16 && S.triggerMode !== 'hand') {
-                isProcessing = false;
-                return;
-            }
+            // 【核心修复1】：加入 try...finally 确保不论是否报错，isProcessing 都会被重置解锁
+            try {
+                // 如果游戏已经止盈或者结束，绝对禁止继续录入数据，防止污染数组
+                if (S.gameStatus !== 'PLAYING') return;
 
-            const { stack, ...snapshotData } = S;
-            S.stack.push(JSON.stringify(snapshotData));
-            if (S.stack.length > 20) S.stack.shift(); 
+                const { stack, ...snapshotData } = S;
+                S.stack.push(JSON.stringify(snapshotData));
+                if (S.stack.length > 20) S.stack.shift(); 
 
-            let instr = getInstruction();
-            let actionText = "观望";
+                let instr = getInstruction();
+                let actionText = "观望";
 
-            // ==== 第一步：执行下注清算 ====
-            if (instr.amt > 0) {
-                let isWin = (instr.side === res);
-                if (isWin) {
-                    S.wlHistory.push('✅');
-                    S.totalPL += instr.amt;
-                    S.groupPL += instr.amt;
-                    
-                    if (S.triggerMode === 'hand') {
-                        // 套餐3：赢牌立刻重置筹码并退回阶段1
-                        S.fibIdx = 0; 
-                        S.s3State = 'PHASE1';
-                        S.s3Target = null;
+                if (instr.amt > 0) {
+                    let isWin = (instr.side === res);
+                    if (isWin) {
+                        S.wlHistory.push('✅');
+                        S.totalPL += instr.amt;
+                        S.groupPL += instr.amt;
                         
-                        // 【核心更新】：只要盈利了就触发止盈离场状态
-                        if (S.totalPL > 0) {
-                            S.gameStatus = 'WON';
-                        }
-                    }
-                } else {
-                    S.wlHistory.push('❌');
-                    S.totalPL -= instr.amt;
-                    S.groupPL -= instr.amt;
-
-                    if (S.triggerMode === 'hand') {
-                        // 套餐3：输牌筹码翻倍，状态机流转
-                        S.fibIdx++;
-                        if (S.s3State === 'PHASE2') {
-                            S.s3State = 'PHASE3'; // 进入补刀
-                            S.s3Target = res;     // 顺着刚才反转出的那个结果下注
-                        } else if (S.s3State === 'PHASE3') {
-                            S.s3State = 'PHASE1'; // 两步均失败，退回观望
+                        if (S.triggerMode === 'hand') {
+                            S.fibIdx = 0; 
+                            S.s3State = 'PHASE1';
                             S.s3Target = null;
-                        }
-                    }
-                }
-                // 套餐1和2的递增
-                if (S.triggerMode !== 'hand') S.fibIdx++; 
-
-                actionText = `打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`;
-            }
-
-            // 追加到连续历史流
-            if(!S.flatHistory) S.flatHistory = [];
-            S.flatHistory.push(res);
-
-            // ==== 第二步：处理 UI 组展示与 套餐1&2 逻辑 ====
-            if (S.hand === 1) {
-                S.currentH1Res = res;
-                S.hand = 2;
-                S.records.unshift({ id: S.group, h1: res, h2: '-', action: actionText, pl: S.groupPL, totalPL: S.totalPL, isComplete: false });
-            } else {
-                let groupRes = S.currentH1Res + res;
-                S.history.push(groupRes);
-
-                if(S.records.length > 0 && !S.records[0].isComplete) {
-                    S.records[0].h2 = res;
-                    S.records[0].action += (instr.amt>0 ? `<br>打${instr.side==='B'?'0':'1'} [${instr.amt}] ${instr.side===res?'胜':'负'}` : `<br>观望`);
-                    S.records[0].pl = S.groupPL;
-                    S.records[0].totalPL = S.totalPL;
-                    S.records[0].isComplete = true;
-                }
-
-                if (S.triggerMode !== 'hand') {
-                    let hasA = groupRes.includes('B');
-                    let hasB = groupRes.includes('P');
-
-                    if (S.targetProp) {
-                        if ((S.targetProp === 'A' && hasA) || (S.targetProp === 'B' && hasB)) {
-                            S.streak++;
-                            if (S.streak >= 4) {
-                                S.gameStatus = 'WON'; 
+                            
+                            if (S.totalPL > 0) {
+                                S.gameStatus = 'WON';
                             }
-                        } else {
-                            S.targetProp = null;
-                            S.streak = 0;
+                        }
+                    } else {
+                        S.wlHistory.push('❌');
+                        S.totalPL -= instr.amt;
+                        S.groupPL -= instr.amt;
+
+                        if (S.triggerMode === 'hand') {
+                            S.fibIdx++;
+                            if (S.s3State === 'PHASE2') {
+                                S.s3State = 'PHASE3'; 
+                                S.s3Target = res;     
+                            } else if (S.s3State === 'PHASE3') {
+                                S.s3State = 'PHASE1'; 
+                                S.s3Target = null;
+                            }
+                        }
+                    }
+                    if (S.triggerMode !== 'hand') S.fibIdx++; 
+
+                    actionText = `打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`;
+                }
+
+                if(!S.flatHistory) S.flatHistory = [];
+                S.flatHistory.push(res);
+
+                if (S.hand === 1) {
+                    S.currentH1Res = res;
+                    S.hand = 2;
+                    S.records.unshift({ id: S.group, h1: res, h2: '-', action: actionText, pl: S.groupPL, totalPL: S.totalPL, isComplete: false });
+                } else {
+                    let groupRes = S.currentH1Res + res;
+                    S.history.push(groupRes);
+
+                    if(S.records.length > 0 && !S.records[0].isComplete) {
+                        S.records[0].h2 = res;
+                        S.records[0].action += (instr.amt>0 ? `<br>打${instr.side==='B'?'0':'1'} [${instr.amt}] ${instr.side===res?'胜':'负'}` : `<br>观望`);
+                        S.records[0].pl = S.groupPL;
+                        S.records[0].totalPL = S.totalPL;
+                        S.records[0].isComplete = true;
+                    }
+
+                    if (S.triggerMode !== 'hand') {
+                        let hasA = groupRes.includes('B');
+                        let hasB = groupRes.includes('P');
+
+                        if (S.targetProp) {
+                            if ((S.targetProp === 'A' && hasA) || (S.targetProp === 'B' && hasB)) {
+                                S.streak++;
+                                if (S.streak >= 4) {
+                                    S.gameStatus = 'WON'; 
+                                }
+                            } else {
+                                S.targetProp = null;
+                                S.streak = 0;
+                            }
+                        }
+
+                        let tLen = S.triggerMode;
+                        if (!S.targetProp && S.gameStatus === 'PLAYING' && S.history.length >= tLen) {
+                            let isAllA = true, isAllB = true;
+                            for(let i = 1; i <= tLen; i++) {
+                                let h = S.history[S.history.length - i];
+                                if(!h.includes('B')) isAllA = false;
+                                if(!h.includes('P')) isAllB = false;
+                            }
+
+                            if (isAllA) {
+                                S.targetProp = 'A';
+                                S.streak = tLen;
+                            } else if (isAllB) {
+                                S.targetProp = 'B';
+                                S.streak = tLen;
+                            }
                         }
                     }
 
-                    let tLen = S.triggerMode;
-                    if (!S.targetProp && S.gameStatus === 'PLAYING' && S.history.length >= tLen) {
-                        let isAllA = true, isAllB = true;
-                        for(let i = 1; i <= tLen; i++) {
-                            let h = S.history[S.history.length - i];
-                            if(!h.includes('B')) isAllA = false;
-                            if(!h.includes('P')) isAllB = false;
-                        }
+                    S.group++;
+                    S.hand = 1;
+                    S.currentH1Res = null;
+                    S.groupPL = 0;
 
-                        if (isAllA) {
-                            S.targetProp = 'A';
-                            S.streak = tLen;
-                        } else if (isAllB) {
-                            S.targetProp = 'B';
-                            S.streak = tLen;
-                        }
+                    if (S.triggerMode !== 'hand' && S.group > 16 && S.gameStatus === 'PLAYING') {
+                        S.gameStatus = 'GAMEOVER';
                     }
                 }
 
-                S.group++;
-                S.hand = 1;
-                S.currentH1Res = null;
-                S.groupPL = 0;
-
-                // 套餐3没有轮数限制
-                if (S.triggerMode !== 'hand' && S.group > 16 && S.gameStatus === 'PLAYING') {
-                    S.gameStatus = 'GAMEOVER';
+                if (S.gameStatus === 'PLAYING' && S.triggerMode === 'hand' && S.s3State === 'PHASE1' && S.flatHistory.length >= 2) {
+                    let last2 = S.flatHistory.slice(-2);
+                    if (last2[0] === 'B' && last2[1] === 'B') {
+                        S.s3State = 'PHASE2';
+                        S.s3Target = 'B';
+                    } else if (last2[0] === 'P' && last2[1] === 'P') {
+                        S.s3State = 'PHASE2';
+                        S.s3Target = 'P';
+                    }
                 }
+            } catch (err) {
+                console.error("Input logic error:", err);
+            } finally {
+                autoSaveSession();
+                updateUI();
+                setTimeout(() => { isProcessing = false; }, 50); 
             }
-
-            // ==== 第三步：处理 套餐3 (阶段1触发判定) ====
-            // 只有当游戏还在进行中时，才继续寻找新触发
-            if (S.gameStatus === 'PLAYING' && S.triggerMode === 'hand' && S.s3State === 'PHASE1' && S.flatHistory.length >= 2) {
-                let last2 = S.flatHistory.slice(-2);
-                if (last2[0] === 'B' && last2[1] === 'B') {
-                    S.s3State = 'PHASE2';
-                    S.s3Target = 'B';
-                } else if (last2[0] === 'P' && last2[1] === 'P') {
-                    S.s3State = 'PHASE2';
-                    S.s3Target = 'P';
-                }
-            }
-            
-            autoSaveSession();
-            updateUI();
-            setTimeout(() => { isProcessing = false; }, 50); 
         }
 
         function undo() {
@@ -582,12 +578,10 @@
                     else { statusLabel.innerText = "🟢 套餐1/2运行中 - 动态追踪模式"; statusLabel.style.color = "var(--accent)"; }
                 }
 
-                // UI 面板自适应展示
                 document.getElementById('lblFibLevel').innerText = S.bettingMode === 'martingale' ? '注码(马丁)' : '注码(斐波)';
                 document.getElementById('fibLevel').innerText = S.fibIdx;
                 
                 if (S.triggerMode === 'hand') {
-                    // 套餐 3 界面适应
                     document.getElementById('lblTrigger').innerText = '当前阶段';
                     let pName = S.s3State === 'PHASE1' ? 'P1(观望)' : (S.s3State === 'PHASE2' ? 'P2(一裁)' : 'P3(二裁)');
                     document.getElementById('targetProp').innerText = pName;
@@ -610,7 +604,6 @@
                         document.getElementById('regFill').style.background = 'linear-gradient(90deg, #0a84ff 0%, #32d74b 100%)';
                     }
                 } else {
-                    // 套餐 1 & 2 界面恢复
                     document.getElementById('lblTrigger').innerText = S.triggerMode === 3 ? '目标(3连触发)' : '目标(2连触发)';
                     document.getElementById('targetProp').innerText = S.targetProp ? (S.targetProp==='A'?'A (打0)':'B (打1)') : "无";
                     document.getElementById('targetProp').className = S.targetProp ? (S.targetProp==='A'?'cum-val side-B':'cum-val side-P') : 'cum-val wait-color';
@@ -629,8 +622,11 @@
 
                 document.getElementById('betCount').innerText = (wins + losses);
                 document.getElementById('wlStatsText').innerText = `胜: ${wins} | 负: ${losses} | 胜率: ${winRate}%`;
+                
+                // 【核心修复2】：限制胜负符号最大渲染数量（防止无限模式内存溢出）
                 const wlList = document.getElementById('wlList');
-                wlList.innerHTML = S.wlHistory.map(item => `<span class="${item==='✅'?'wl-item-win':'wl-item-loss'}">${item}</span>`).join('');
+                const displayWL = S.wlHistory.slice(-150);
+                wlList.innerHTML = displayWL.map(item => `<span class="${item==='✅'?'wl-item-win':'wl-item-loss'}">${item}</span>`).join('');
                 wlList.scrollTop = wlList.scrollHeight;
 
                 let instr = getInstruction();
@@ -649,9 +645,11 @@
                 }
                 document.getElementById('instrDetail').innerText = instr.detail;
 
+                // 【核心修复3】：限制表格最大渲染行数（防止滚动卡顿死锁）
                 let html = "";
-                for(let i=0; i<S.records.length; i++) {
-                    let rec = S.records[i];
+                let displayRecords = S.records.slice(0, 60);
+                for(let i=0; i<displayRecords.length; i++) {
+                    let rec = displayRecords[i];
                     html += `<tr>
                         <td>G${rec.id}</td>
                         <td style="font-weight:bold; color:#fff">${rec.h1 === 'B' ? '0' : (rec.h1 === 'P' ? '1' : '-')} , ${rec.h2 === 'B' ? '0' : (rec.h2 === 'P' ? '1' : '-')}</td>
@@ -666,9 +664,9 @@
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
             let saveObj = { id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData };
-            let hist = JSON.parse(localStorage.getItem('bacc_v9_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v95_hist')||'[]');
             hist.unshift(saveObj);
-            localStorage.setItem('bacc_v9_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v95_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
@@ -684,7 +682,7 @@
                 s3Target: null
             };
             const { stack, ...dataToSave } = S;
-            localStorage.setItem('bacc_v9_session', JSON.stringify(dataToSave));
+            localStorage.setItem('bacc_v95_session', JSON.stringify(dataToSave));
         }
 
         function resetGame() { 
