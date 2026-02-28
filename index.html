@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v10.5</title>
+    <title>Baccarat Sniper Max v10.6</title>
     <style>
         :root {
             --bg: #000000;
@@ -106,12 +106,11 @@
         .reg-bar-bg { height: 6px; background: #333; border-radius: 3px; overflow: hidden; border: 1px solid #444; }
         .reg-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent) 0%, var(--win) 100%); box-shadow: 0 0 8px rgba(50, 215, 75, 0.2); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 
-        /* 新增：拉布谢尔专属序列显示框 */
         .labouchere-display {
             background: #111; border: 1px dashed #444; border-radius: 8px;
             padding: 8px; margin-bottom: 8px; text-align: center;
             font-size: 16px; color: var(--accent); font-family: monospace; font-weight: bold;
-            display: none; /* 默认隐藏，选中套餐4才显示 */
+            display: none; 
             word-wrap: break-word; letter-spacing: 1px;
         }
         .labouchere-label {
@@ -199,14 +198,14 @@
                 <option value="2_fib">套餐 1：2连触发 (AA/BB) + 斐波那契</option>
                 <option value="3_martingale">套餐 2：3连触发 (AAA/BBB) + 马丁格尔</option>
                 <option value="hand_martingale">套餐 3：连续手拦截 (000/0011) + 马丁格尔</option>
-                <option value="2_labouchere">套餐 4：2连触发 (AA/BB) + 拉布谢尔 (-27止损)</option>
+                <option value="2_labouchere">套餐 4：2连触发 (AA/BB) + 拉布谢尔 (无限局，划完止盈)</option>
             </select>
 
             <div style="font-size: 11px; color: #888; text-align: left; margin-top: 5px; line-height: 1.4;">
                 * 套餐1：高频触发，遇震荡缓慢拉升。(16组)<br>
                 * 套餐2：低频防御，一击必杀强制回本。(16组)<br>
                 * 套餐3：流水线两步拦截，只要盈利即止盈。(无限)<br>
-                * 套餐4：拉布谢尔消数法，-27分硬止损。(8组)
+                * 套餐4：拉布谢尔消数法，无限周期死磕，划完即止盈。
             </div>
 
             <div style="display:flex; gap:10px; margin-top:20px;">
@@ -219,7 +218,7 @@
     <div id="appLayer">
         <div class="header">
             <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
-            <span class="app-title">Sniper Pro Max v10.5</span>
+            <span class="app-title">Sniper Pro Max v10.6</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -319,8 +318,8 @@
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v105_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v105_session');
+            if (localStorage.getItem('bacc_v106_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v106_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2;
@@ -335,7 +334,7 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v105_logged_in', 'true');
+                localStorage.setItem('bacc_v106_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -348,7 +347,7 @@
 
         function logout() {
             if(confirm("确定要退出吗？")) {
-                localStorage.removeItem('bacc_v105_logged_in');
+                localStorage.removeItem('bacc_v106_logged_in');
                 location.reload();
             }
         }
@@ -382,7 +381,7 @@
         function autoSaveSession() {
             setTimeout(() => {
                 const { stack, ...dataToSave } = S; 
-                localStorage.setItem('bacc_v105_session', JSON.stringify(dataToSave));
+                localStorage.setItem('bacc_v106_session', JSON.stringify(dataToSave));
             }, 0);
         }
 
@@ -401,11 +400,9 @@
 
         function getInstruction() {
             if (S.gameStatus === 'WON') return { side: null, amt: 0, msg: "🎯 止盈离场！", detail: "达成盈利收网，请重置开启新一局" };
-            if (S.gameStatus === 'GAMEOVER_LOSS') return { side: null, amt: 0, msg: "💀 触发熔断", detail: "已跌破 -27 分，请割肉重置" };
-            if (S.gameStatus === 'GAMEOVER') return { side: null, amt: 0, msg: "🏁 窗口结束", detail: "周期耗尽，请重置" };
+            if (S.gameStatus === 'GAMEOVER') return { side: null, amt: 0, msg: "🏁 16组结束", detail: "窗口耗尽，请重置" };
             
-            let maxGroups = (S.bettingMode === 'labouchere') ? 8 : 16;
-            if (S.triggerMode !== 'hand' && S.group > maxGroups) return { side: null, amt: 0, msg: "等待重置", detail: "-" };
+            if (S.triggerMode !== 'hand' && S.bettingMode !== 'labouchere' && S.group > 16) return { side: null, amt: 0, msg: "等待重置", detail: "-" };
 
             let currentAmt = calculateBetAmount();
 
@@ -479,8 +476,7 @@
 
                         // 拉布谢尔追加
                         if (S.bettingMode === 'labouchere') {
-                            S.labouchereSeq.push(instr.amt); // 把输的加到最后
-                            if (S.totalPL <= -27) S.gameStatus = 'GAMEOVER_LOSS'; // 触发 -27 熔断
+                            S.labouchereSeq.push(instr.amt); // 把输的加到最后，移除-27止损
                         }
 
                         if (S.triggerMode === 'hand') {
@@ -559,8 +555,8 @@
                     S.currentH1Res = null;
                     S.groupPL = 0;
 
-                    let maxGroups = (S.bettingMode === 'labouchere') ? 8 : 16;
-                    if (S.triggerMode !== 'hand' && S.group > maxGroups && S.gameStatus === 'PLAYING') {
+                    // 只有套餐1和2有16组限制，套餐3和4无限期
+                    if (S.triggerMode !== 'hand' && S.bettingMode !== 'labouchere' && S.group > 16 && S.gameStatus === 'PLAYING') {
                         S.gameStatus = 'GAMEOVER';
                     }
                 }
@@ -604,10 +600,7 @@
                 document.getElementById('totalPL').className = S.totalPL > 0 ? 'pl-value win-color' : (S.totalPL < 0 ? 'pl-value loss-color' : 'pl-value');
                 
                 let statusLabel = document.getElementById('gameStatusLabel');
-                if (S.gameStatus === 'GAMEOVER_LOSS') {
-                    statusLabel.innerText = "💀 触发止损 - 认亏割肉离场"; 
-                    statusLabel.style.color = "var(--loss)";
-                } else if (S.gameStatus === 'WON') {
+                if (S.gameStatus === 'WON') {
                     statusLabel.innerText = "🎉 挑战成功 - 盈利收网离场"; 
                     statusLabel.style.color = "var(--win)";
                 } else if (S.gameStatus === 'GAMEOVER') {
@@ -617,7 +610,7 @@
                     if (S.triggerMode === 'hand') {
                         statusLabel.innerText = "🟢 套餐3运行中 - 连续流水线拦截"; 
                     } else if (S.bettingMode === 'labouchere') {
-                        statusLabel.innerText = "🟢 套餐4运行中 - 拉布谢尔防守反击"; 
+                        statusLabel.innerText = "🟢 套餐4运行中 - 拉布谢尔无限狙击"; 
                     } else {
                         statusLabel.innerText = "🟢 套餐1/2运行中 - 动态追踪模式"; 
                     }
@@ -672,22 +665,29 @@
                     document.getElementById('streakCount').className = S.streak >= 4 ? 'cum-val win-color' : 'cum-val';
                     document.getElementById('streakRate').style.display = 'inline';
 
-                    let maxGroups = (S.bettingMode === 'labouchere') ? 8 : 16;
-                    document.getElementById('lblProgress').innerText = maxGroups + '组窗口进度 (WINDOW PROGRESS)';
-                    
-                    if (S.gameStatus === 'GAMEOVER_LOSS') {
-                        document.getElementById('regFill').style.width = '100%';
-                        document.getElementById('regFill').style.background = 'var(--loss)';
-                        document.getElementById('regPercent').innerText = '已熔断';
-                    } else if (S.gameStatus === 'WON') {
-                        document.getElementById('regFill').style.width = '100%';
-                        document.getElementById('regFill').style.background = 'var(--win)';
-                        document.getElementById('regPercent').innerText = '已止盈';
+                    if (S.bettingMode === 'labouchere') {
+                        document.getElementById('lblProgress').innerText = '拉布谢尔追踪模式 (INFINITE)';
+                        if (S.gameStatus === 'WON') {
+                            document.getElementById('regFill').style.width = '100%';
+                            document.getElementById('regFill').style.background = 'var(--win)';
+                            document.getElementById('regPercent').innerText = '已止盈';
+                        } else {
+                            document.getElementById('regFill').style.width = '100%';
+                            document.getElementById('regFill').style.background = 'linear-gradient(90deg, #0a84ff 0%, #32d74b 100%)';
+                            document.getElementById('regPercent').innerText = '无限循环';
+                        }
                     } else {
-                        let progress = Math.min((S.group - 1 + (S.hand===2?0.5:0)) / maxGroups * 100, 100);
-                        document.getElementById('regFill').style.width = progress + '%';
-                        document.getElementById('regFill').style.background = 'linear-gradient(90deg, var(--accent) 0%, var(--win) 100%)';
-                        document.getElementById('regPercent').innerText = Math.floor(progress) + '%';
+                        document.getElementById('lblProgress').innerText = '16组窗口进度 (WINDOW PROGRESS)';
+                        if (S.gameStatus === 'WON') {
+                            document.getElementById('regFill').style.width = '100%';
+                            document.getElementById('regFill').style.background = 'var(--win)';
+                            document.getElementById('regPercent').innerText = '已止盈';
+                        } else {
+                            let progress = Math.min((S.group - 1 + (S.hand===2?0.5:0)) / 16 * 100, 100);
+                            document.getElementById('regFill').style.width = progress + '%';
+                            document.getElementById('regFill').style.background = 'linear-gradient(90deg, var(--accent) 0%, var(--win) 100%)';
+                            document.getElementById('regPercent').innerText = Math.floor(progress) + '%';
+                        }
                     }
                 }
 
@@ -700,9 +700,9 @@
                 wlList.scrollTop = wlList.scrollHeight;
 
                 let instr = getInstruction();
-                let infTag = S.triggerMode === 'hand' ? ' (无限)' : '';
-                let maxGroups = (S.bettingMode === 'labouchere') ? 8 : 16;
-                document.getElementById('phaseTag').innerText = `第 ${S.triggerMode==='hand'?S.group:Math.min(S.group, maxGroups)} 组 | 位置 ${S.hand}${infTag}`;
+                let infTag = (S.triggerMode === 'hand' || S.bettingMode === 'labouchere') ? ' (无限)' : '';
+                let displayGroup = (S.triggerMode === 'hand' || S.bettingMode === 'labouchere') ? S.group : Math.min(S.group, 16);
+                document.getElementById('phaseTag').innerText = `第 ${displayGroup} 组 | 位置 ${S.hand}${infTag}`;
                 
                 let dir = document.getElementById('instrDir');
                 if (instr.amt === 0) { 
@@ -734,9 +734,9 @@
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
             let saveObj = { id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData };
-            let hist = JSON.parse(localStorage.getItem('bacc_v105_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v106_hist')||'[]');
             hist.unshift(saveObj);
-            localStorage.setItem('bacc_v105_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v106_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
@@ -753,7 +753,7 @@
                 labouchereSeq: [1, 1, 1]
             };
             const { stack, ...dataToSave } = S;
-            localStorage.setItem('bacc_v105_session', JSON.stringify(dataToSave));
+            localStorage.setItem('bacc_v106_session', JSON.stringify(dataToSave));
         }
 
         function resetGame() { 
