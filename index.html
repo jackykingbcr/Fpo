@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v8.0</title>
+    <title>Baccarat Sniper Max v9.0</title>
     <style>
         :root {
             --bg: #000000;
@@ -47,7 +47,7 @@
         .modal-input {
             width: 100%; padding: 12px; margin: 8px 0 15px 0;
             background: #2c2c2e; border: 1px solid #444; color: #fff;
-            border-radius: 8px; box-sizing: border-box; font-size: 15px;
+            border-radius: 8px; box-sizing: border-box; font-size: 14px;
             outline: none;
         }
         .modal-input:focus { border-color: var(--accent); }
@@ -188,6 +188,7 @@
             <select id="selBetting" class="modal-input">
                 <option value="fib">斐波那契数列 (1, 2, 3, 5, 8...)</option>
                 <option value="martingale">马丁格尔数列 (1, 2, 4, 8, 16...)</option>
+                <option value="labouchere">拉布谢尔消数法 (头尾相加/去首末)</option>
             </select>
 
             <div style="display:flex; gap:10px; margin-top:10px;">
@@ -200,7 +201,7 @@
     <div id="appLayer">
         <div class="header">
             <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
-            <span class="app-title">Sniper Pro Max v8.0</span>
+            <span class="app-title">Sniper Pro Max v9.0</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -216,7 +217,7 @@
             <div class="comm-row" id="gameStatusLabel" style="color: var(--accent); font-size: 14px;">游戏中 - 追踪状态</div>
 
             <div class="cum-scores-row">
-                <div class="cum-item"><span class="cum-label" id="lblFibLevel">注码(斐波)</span><div class="cum-val-box"><span class="cum-val" id="fibLevel">0</span></div></div>
+                <div class="cum-item"><span class="cum-label" id="lblFibLevel">注码进度</span><div class="cum-val-box"><span class="cum-val" id="fibLevel">0</span></div></div>
                 <div class="cum-item"><span class="cum-label" id="lblTrigger">目标属性</span><div class="cum-val-box"><span class="cum-val" id="targetProp">-</span></div></div>
                 <div class="cum-item"><span class="cum-label">连击层数</span><div class="cum-val-box"><span class="cum-val" id="streakCount">0</span><span class="cum-rate">/4</span></div></div>
                 <div class="cum-item"><span class="cum-label">下注次数</span><div class="cum-val-box"><span class="cum-val" id="betCount">0</span></div></div>
@@ -276,6 +277,7 @@
             hand: 1,            
             history: [],        
             fibIdx: 0,          
+            labouchereSeq: [1, 2, 3], // 新增：拉布谢尔初始序列
             streak: 0,          
             targetProp: null,   
             totalPL: 0,         
@@ -285,19 +287,20 @@
             records: [],        
             gameStatus: 'PLAYING', 
             stack: [],          
-            triggerMode: 2,      // 触发模式 (2 = AA/BB, 3 = AAA/BBB)
-            bettingMode: 'fib'   // 注码模式 ('fib' = 斐波那契, 'martingale' = 马丁格尔)
+            triggerMode: 2,     
+            bettingMode: 'fib'   
         };
         
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v8_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v8_session');
+            if (localStorage.getItem('bacc_v9_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v9_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2;
                     if(!S.bettingMode) S.bettingMode = 'fib';
+                    if(!S.labouchereSeq) S.labouchereSeq = [1, 2, 3];
                 }
                 enterApp();
             }
@@ -305,7 +308,7 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v8_logged_in', 'true');
+                localStorage.setItem('bacc_v9_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -318,7 +321,7 @@
 
         function logout() {
             if(confirm("确定要退出吗？")) {
-                localStorage.removeItem('bacc_v8_logged_in');
+                localStorage.removeItem('bacc_v9_logged_in');
                 location.reload();
             }
         }
@@ -345,7 +348,7 @@
         function autoSaveSession() {
             setTimeout(() => {
                 const { stack, ...dataToSave } = S; 
-                localStorage.setItem('bacc_v8_session', JSON.stringify(dataToSave));
+                localStorage.setItem('bacc_v9_session', JSON.stringify(dataToSave));
             }, 0);
         }
 
@@ -353,6 +356,11 @@
         function calculateBetAmount() {
             if (S.bettingMode === 'martingale') {
                 return Math.pow(2, Math.min(S.fibIdx, 20));
+            } else if (S.bettingMode === 'labouchere') {
+                let seq = S.labouchereSeq;
+                if (seq.length === 0) return 0; // 防护
+                if (seq.length === 1) return seq[0];
+                return seq[0] + seq[seq.length - 1]; // 头尾相加
             } else {
                 return S.fibIdx < FIB.length ? FIB[S.fibIdx] : FIB[FIB.length - 1];
             }
@@ -394,7 +402,6 @@
                 return;
             }
 
-            // 保存状态用于Undo
             const { stack, ...snapshotData } = S;
             S.stack.push(JSON.stringify(snapshotData));
             if (S.stack.length > 20) S.stack.shift(); 
@@ -409,12 +416,29 @@
                     S.wlHistory.push('✅');
                     S.totalPL += instr.amt;
                     S.groupPL += instr.amt;
+                    
+                    // 赢了的处理逻辑
+                    if (S.bettingMode === 'labouchere') {
+                        S.labouchereSeq.shift(); // 掐头
+                        if (S.labouchereSeq.length > 0) S.labouchereSeq.pop(); // 去尾
+                        if (S.labouchereSeq.length === 0) S.labouchereSeq = [1, 2, 3]; // 消除完毕，重新生成序列
+                    }
                 } else {
                     S.wlHistory.push('❌');
                     S.totalPL -= instr.amt;
                     S.groupPL -= instr.amt;
+                    
+                    // 输了的处理逻辑
+                    if (S.bettingMode === 'labouchere') {
+                        S.labouchereSeq.push(instr.amt); // 把输掉的数加到末尾
+                    }
                 }
-                S.fibIdx++; // 出手即递增
+                
+                // 只有斐波那契和马丁格尔需要暴力递增 index
+                if (S.bettingMode !== 'labouchere') {
+                    S.fibIdx++; 
+                }
+                
                 actionText = `打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`;
             }
 
@@ -445,13 +469,11 @@
                             S.gameStatus = 'WON'; 
                         }
                     } else {
-                        // 断裂，重置
                         S.targetProp = null;
                         S.streak = 0;
                     }
                 }
 
-                // --- 动态触发检测 (支持 2连 或 3连) ---
                 let tLen = S.triggerMode;
                 if (!S.targetProp && S.gameStatus === 'PLAYING' && S.history.length >= tLen) {
                     let isAllA = true, isAllB = true;
@@ -509,10 +531,16 @@
                 else if(S.gameStatus === 'GAMEOVER') { statusLabel.innerText = "⚠️ 游戏结束 - 16组窗口耗尽"; statusLabel.style.color = "var(--loss)"; }
                 else { statusLabel.innerText = "🟢 游戏中 - 动态追踪模式"; statusLabel.style.color = "var(--accent)"; }
 
-                document.getElementById('lblFibLevel').innerText = S.bettingMode === 'martingale' ? '注码(马丁)' : '注码(斐波)';
-                document.getElementById('lblTrigger').innerText = S.triggerMode === 3 ? '目标(3连触发)' : '目标(2连触发)';
+                // 动态更新不同注码模式下的面板显示
+                if (S.bettingMode === 'labouchere') {
+                    document.getElementById('lblFibLevel').innerText = '消数余量';
+                    document.getElementById('fibLevel').innerText = S.labouchereSeq.length; // 显示剩余几项没被划掉
+                } else {
+                    document.getElementById('lblFibLevel').innerText = S.bettingMode === 'martingale' ? '注码(马丁)' : '注码(斐波)';
+                    document.getElementById('fibLevel').innerText = S.fibIdx;
+                }
 
-                document.getElementById('fibLevel').innerText = S.fibIdx;
+                document.getElementById('lblTrigger').innerText = S.triggerMode === 3 ? '目标(3连触发)' : '目标(2连触发)';
                 document.getElementById('targetProp').innerText = S.targetProp ? (S.targetProp==='A'?'A (打0)':'B (打1)') : "无";
                 document.getElementById('targetProp').className = S.targetProp ? (S.targetProp==='A'?'cum-val side-B':'cum-val side-P') : 'cum-val wait-color';
                 document.getElementById('streakCount').innerText = S.streak;
@@ -560,27 +588,26 @@
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
             let saveObj = { id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData };
-            let hist = JSON.parse(localStorage.getItem('bacc_v8_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v9_hist')||'[]');
             hist.unshift(saveObj);
-            localStorage.setItem('bacc_v8_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v9_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
-        // --- 核心修复：无感刷新重置，解决退回登录界面Bug ---
         function resetGame() { 
             if(confirm("确定要重置并开启新的16组窗口吗？")) { 
                 S = {
-                    group: 1, hand: 1, history: [], fibIdx: 0, streak: 0,
-                    targetProp: null, totalPL: 0, groupPL: 0, currentH1Res: null,
+                    group: 1, hand: 1, history: [], fibIdx: 0, 
+                    labouchereSeq: [1, 2, 3], // 新增：重置时恢复初始序列
+                    streak: 0, targetProp: null, totalPL: 0, groupPL: 0, currentH1Res: null,
                     wlHistory: [], records: [], gameStatus: 'PLAYING', stack: [],
-                    triggerMode: S.triggerMode,  // 继承设定的触发模式
-                    bettingMode: S.bettingMode   // 继承设定的注码模式
+                    triggerMode: S.triggerMode,  
+                    bettingMode: S.bettingMode   
                 };
                 
                 const { stack, ...dataToSave } = S;
-                localStorage.setItem('bacc_v8_session', JSON.stringify(dataToSave));
+                localStorage.setItem('bacc_v9_session', JSON.stringify(dataToSave));
                 
-                // 直接更新UI，不再重新加载网页
                 updateUI(); 
             } 
         }
