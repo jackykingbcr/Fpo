@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v10.0 (终极版)</title>
+    <title>Baccarat Sniper Max v10.5</title>
     <style>
         :root {
             --bg: #000000;
@@ -106,6 +106,19 @@
         .reg-bar-bg { height: 6px; background: #333; border-radius: 3px; overflow: hidden; border: 1px solid #444; }
         .reg-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent) 0%, var(--win) 100%); box-shadow: 0 0 8px rgba(50, 215, 75, 0.2); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 
+        /* 新增：拉布谢尔专属序列显示框 */
+        .labouchere-display {
+            background: #111; border: 1px dashed #444; border-radius: 8px;
+            padding: 8px; margin-bottom: 8px; text-align: center;
+            font-size: 16px; color: var(--accent); font-family: monospace; font-weight: bold;
+            display: none; /* 默认隐藏，选中套餐4才显示 */
+            word-wrap: break-word; letter-spacing: 1px;
+        }
+        .labouchere-label {
+            font-size: 10px; color: #888; display: block; margin-bottom: 4px; 
+            letter-spacing: normal; font-family: -apple-system, sans-serif; font-weight: normal;
+        }
+
         .instr-card {
             background: linear-gradient(135deg, #3a3a3c, #2c2c2e);
             border: 1px solid #444; border-radius: 12px;
@@ -206,7 +219,7 @@
     <div id="appLayer">
         <div class="header">
             <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
-            <span class="app-title">Sniper Pro Max v10.0</span>
+            <span class="app-title">Sniper Pro Max v10.5</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -231,6 +244,11 @@
             <div class="reg-progress-area">
                 <div class="reg-label-row"><span id="lblProgress">组窗口进度 (WINDOW PROGRESS)</span><span id="regPercent">0%</span></div>
                 <div class="reg-bar-bg"><div id="regFill" class="reg-bar-fill"></div></div>
+            </div>
+
+            <div id="labouchereBox" class="labouchere-display">
+                <span class="labouchere-label">当前消数序列 (LABOUCHERE SEQUENCE)</span>
+                <span id="labouchereSeqText">1 - 1 - 1</span>
             </div>
 
             <div class="instr-card">
@@ -295,14 +313,14 @@
             flatHistory: [],    
             s3State: 'PHASE1',  
             s3Target: null,
-            labouchereSeq: [1, 1, 1]  // 套餐4专属：初始序列 [1, 1, 1]
+            labouchereSeq: [1, 1, 1]
         };
         
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v10_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v10_session');
+            if (localStorage.getItem('bacc_v105_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v105_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2;
@@ -317,7 +335,7 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v10_logged_in', 'true');
+                localStorage.setItem('bacc_v105_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -330,7 +348,7 @@
 
         function logout() {
             if(confirm("确定要退出吗？")) {
-                localStorage.removeItem('bacc_v10_logged_in');
+                localStorage.removeItem('bacc_v105_logged_in');
                 location.reload();
             }
         }
@@ -364,7 +382,7 @@
         function autoSaveSession() {
             setTimeout(() => {
                 const { stack, ...dataToSave } = S; 
-                localStorage.setItem('bacc_v10_session', JSON.stringify(dataToSave));
+                localStorage.setItem('bacc_v105_session', JSON.stringify(dataToSave));
             }, 0);
         }
 
@@ -606,10 +624,18 @@
                     statusLabel.style.color = "var(--accent)";
                 }
 
+                // 核心控制：拉布谢尔专属面板的展示
+                const labBox = document.getElementById('labouchereBox');
                 if (S.bettingMode === 'labouchere') {
+                    labBox.style.display = 'block';
                     document.getElementById('lblFibLevel').innerText = '消数余量';
                     document.getElementById('fibLevel').innerText = S.labouchereSeq.length + '项';
+                    
+                    // 渲染实际序列 (如: 1 - 1 - 1 - 2)
+                    let seqDisplay = S.labouchereSeq.length > 0 ? S.labouchereSeq.join(' - ') : '已清空 (等待重置)';
+                    document.getElementById('labouchereSeqText').innerText = seqDisplay;
                 } else {
+                    labBox.style.display = 'none';
                     document.getElementById('lblFibLevel').innerText = S.bettingMode === 'martingale' ? '注码(马丁)' : '注码(斐波)';
                     document.getElementById('fibLevel').innerText = S.fibIdx;
                 }
@@ -708,9 +734,9 @@
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
             let saveObj = { id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData };
-            let hist = JSON.parse(localStorage.getItem('bacc_v10_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v105_hist')||'[]');
             hist.unshift(saveObj);
-            localStorage.setItem('bacc_v10_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v105_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
@@ -727,7 +753,7 @@
                 labouchereSeq: [1, 1, 1]
             };
             const { stack, ...dataToSave } = S;
-            localStorage.setItem('bacc_v10_session', JSON.stringify(dataToSave));
+            localStorage.setItem('bacc_v105_session', JSON.stringify(dataToSave));
         }
 
         function resetGame() { 
