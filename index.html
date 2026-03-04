@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v12.0</title>
+    <title>Baccarat Sniper Max v13.0</title>
     <style>
         :root {
             --bg: #000000;
@@ -175,7 +175,6 @@
         .loss-color { color: var(--loss); }
         .wait-color { color: #888; }
 
-        /* 模拟器专属样式 */
         .sim-textarea {
             width: 100%; height: 100px; padding: 12px; margin: 8px 0 15px 0;
             background: #111; border: 1px dashed #555; color: var(--accent);
@@ -210,11 +209,11 @@
                 <option value="2_fib">套餐 1：2连触发 (AA/BB) + 斐波那契</option>
                 <option value="3_martingale">套餐 2：3连触发 (AAA/BBB) + 马丁格尔</option>
                 <option value="hand_martingale">套餐 3：连续手拦截 (000/0011) + 马丁格尔</option>
-                <option value="2_labouchere">套餐 4：2连触发 (AA/BB) + 拉布谢尔 (无限死磕)</option>
-                <option value="hand_labouchere">套餐 5：连续手拦截 + 拉布谢尔 (终极组合)</option>
+                <option value="2_labouchere">套餐 4：2连触发 (AA/BB) + 拉布谢尔</option>
+                <option value="macro_labouchere">套餐 5：大路四式(宏观单双接力) + 拉布谢尔</option>
             </select>
             <div style="font-size: 11px; color: #888; text-align: left; margin-top: 5px; line-height: 1.4;">
-                * 切换套餐后，当前棋局将自动重置以应用新规则。
+                * 套餐5介绍：只判定单双组。捕捉双双、单单、双双单、单单双形态。第1手空开探路，第2手镜像/反向狙击。
             </div>
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button class="modal-btn btn-cancel" onclick="closeSettings()">取 消</button>
@@ -236,7 +235,7 @@
                 <option value="3_martingale">套餐 2：3连触发 + 马丁格尔</option>
                 <option value="hand_martingale">套餐 3：连续手拦截 + 马丁格尔</option>
                 <option value="2_labouchere">套餐 4：2连触发 + 拉布谢尔</option>
-                <option value="hand_labouchere">套餐 5：连续手拦截 + 拉布谢尔</option>
+                <option value="macro_labouchere">套餐 5：大路四式宏观接力 + 拉布谢尔</option>
             </select>
 
             <button class="modal-btn" style="background:#0a84ff; color:#fff;" onclick="runSimulation()">🚀 瞬间执行模拟</button>
@@ -252,7 +251,7 @@
                 <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
                 <button class="btn-small" style="background:#0a84ff; color:#fff; border:none;" onclick="openSim()">🔬 模拟</button>
             </div>
-            <span class="app-title">Sniper Pro Max v12.0</span>
+            <span class="app-title">Sniper Pro Max v13.0</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -336,7 +335,8 @@
                 flatHistory: [],
                 s3State: 'PHASE1',
                 s3Target: null,
-                labouchereSeq: [1, 1, 1]
+                labouchereSeq: [1, 1, 1],
+                macroPattern: [] // 专门给策略5存储单双组历史 ['D', 'S', 'D'...] (D:双, S:单)
             };
         }
 
@@ -344,15 +344,11 @@
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v12_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v12_session');
+            if (localStorage.getItem('bacc_v13_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v13_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
-                    if(!S.triggerMode) S.triggerMode = 2;
-                    if(!S.bettingMode) S.bettingMode = 'fib';
-                    if(!S.flatHistory) S.flatHistory = [];
-                    if(!S.s3State) S.s3State = 'PHASE1';
-                    if(!S.labouchereSeq) S.labouchereSeq = [1, 1, 1];
+                    if(!S.macroPattern) S.macroPattern = [];
                 }
                 enterApp();
             }
@@ -360,7 +356,7 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v12_logged_in', 'true');
+                localStorage.setItem('bacc_v13_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -373,7 +369,7 @@
 
         function logout() {
             if(confirm("确定要退出吗？")) {
-                localStorage.removeItem('bacc_v12_logged_in');
+                localStorage.removeItem('bacc_v13_logged_in');
                 location.reload();
             }
         }
@@ -397,7 +393,7 @@
 
         function applySettings() {
             let comboValue = document.getElementById('selStrategy').value.split('_');
-            let newTrig = comboValue[0] === 'hand' ? 'hand' : parseInt(comboValue[0]);
+            let newTrig = comboValue[0] === 'hand' ? 'hand' : (comboValue[0] === 'macro' ? 'macro' : parseInt(comboValue[0]));
             let newBet = comboValue[1];
             
             if (S.triggerMode !== newTrig || S.bettingMode !== newBet) {
@@ -414,7 +410,7 @@
         function autoSaveSession() {
             setTimeout(() => {
                 const { stack, ...dataToSave } = S; 
-                localStorage.setItem('bacc_v12_session', JSON.stringify(dataToSave));
+                localStorage.setItem('bacc_v13_session', JSON.stringify(dataToSave));
             }, 0);
         }
 
@@ -435,10 +431,53 @@
             if (st.gameStatus === 'WON') return { side: null, amt: 0, msg: "🎯 止盈离场！", detail: "达成盈利收网" };
             if (st.gameStatus === 'GAMEOVER') return { side: null, amt: 0, msg: "🏁 16组结束", detail: "窗口耗尽" };
             
-            if (st.triggerMode !== 'hand' && st.bettingMode !== 'labouchere' && st.group > 16) return { side: null, amt: 0, msg: "等待重置", detail: "-" };
+            if (st.triggerMode !== 'hand' && st.triggerMode !== 'macro' && st.bettingMode !== 'labouchere' && st.group > 16) return { side: null, amt: 0, msg: "等待重置", detail: "-" };
 
             let currentAmt = calculateBetAmount(st);
 
+            // ==========================================
+            // 套餐 5：大路四式宏观接力 (Macro Labouchere)
+            // ==========================================
+            if (st.triggerMode === 'macro') {
+                // 必须在位置1的时候给出指令，或者在位置2根据位置1结果给出指令
+                if (st.hand === 1) {
+                    // 位置1，永远空开探路
+                    return { side: null, amt: 0, msg: "空开 (探路)", detail: "组内第1手，不下注观察" };
+                } else {
+                    // 位置2，判断是否触发了四大引擎
+                    let m = st.macroPattern;
+                    let targetIsDouble = null; // true: 预期这组是双; false: 预期这组是单
+                    
+                    if (m.length >= 2) {
+                        let last2 = m.slice(-2).join('');
+                        let last3 = m.length >= 3 ? m.slice(-3).join('') : '';
+                        
+                        if (last2 === 'DD') targetIsDouble = true;        // 引擎A: 双双 -> 抓双
+                        else if (last2 === 'SS') targetIsDouble = false;  // 引擎B: 单单 -> 抓单
+                        else if (last3 === 'DDS') targetIsDouble = false; // 引擎C: 双双单 -> 抓单
+                        else if (last3 === 'SSD') targetIsDouble = true;  // 引擎D: 单单双 -> 抓双
+                    }
+
+                    if (targetIsDouble === null) {
+                        return { side: null, amt: 0, msg: "观 望", detail: "未形成单双形态链，等待信号" };
+                    }
+
+                    // 既然触发了，决定第2手打什么
+                    let h1 = st.currentH1Res;
+                    let betSide;
+                    if (targetIsDouble) {
+                        // 博这组是双（00或11），所以第2手跟着第1手打 (镜像)
+                        betSide = h1;
+                        return { side: betSide, amt: currentAmt, msg: `博双组 (打${betSide==='B'?'0':'1'})`, detail: `第1手开${h1==='B'?'0':'1'}，跟打凑双` };
+                    } else {
+                        // 博这组是单（01或10），所以第2手反着第1手打 (反向)
+                        betSide = (h1 === 'B' ? 'P' : 'B');
+                        return { side: betSide, amt: currentAmt, msg: `博单组 (打${betSide==='B'?'0':'1'})`, detail: `第1手开${h1==='B'?'0':'1'}，反打凑单` };
+                    }
+                }
+            }
+
+            // 套餐 3
             if (st.triggerMode === 'hand') {
                 if (st.s3State === 'PHASE2') {
                     return { side: st.s3Target, amt: currentAmt, msg: `一裁抓 ${st.s3Target==='B'?'000':'111'}`, detail: `顺势拦截：打 ${st.s3Target==='B'?'0':'1'}` };
@@ -449,6 +488,7 @@
                 }
             }
 
+            // 套餐 1 & 2
             let triggerName = st.triggerMode === 3 ? "AAA / BBB" : "AA / BB";
             if (st.targetProp) {
                 let betSide = st.targetProp === 'A' ? 'B' : 'P';
@@ -474,6 +514,7 @@
             let instr = getInstruction(st);
             let actionText = "观望";
 
+            // 执行下注动作清算
             if (instr.amt > 0) {
                 let isWin = (instr.side === res);
                 if (isWin) {
@@ -491,10 +532,7 @@
                         st.fibIdx = 0; 
                         st.s3State = 'PHASE1';
                         st.s3Target = null;
-                        // 非拉布谢尔模式下，流水线有盈利就立刻止盈
-                        if (st.bettingMode !== 'labouchere' && st.totalPL > 0) {
-                            st.gameStatus = 'WON';
-                        }
+                        if (st.bettingMode !== 'labouchere' && st.totalPL > 0) st.gameStatus = 'WON';
                     }
                 } else {
                     st.wlHistory.push('❌');
@@ -518,11 +556,14 @@
                 }
                 if (st.triggerMode !== 'hand' && st.bettingMode !== 'labouchere') st.fibIdx++; 
                 actionText = `打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`;
+            } else if (st.triggerMode === 'macro' && st.hand === 1) {
+                actionText = `空开 (${res==='B'?'0':'1'})`;
             }
 
             if(!st.flatHistory) st.flatHistory = [];
             st.flatHistory.push(res);
 
+            // 处理组的进位逻辑
             if (st.hand === 1) {
                 st.currentH1Res = res;
                 st.hand = 2;
@@ -531,6 +572,7 @@
                 let groupRes = st.currentH1Res + res;
                 st.history.push(groupRes);
 
+                // 更新记录
                 if(st.records.length > 0 && !st.records[0].isComplete) {
                     st.records[0].h2 = res;
                     st.records[0].action += (instr.amt>0 ? `<br>打${instr.side==='B'?'0':'1'} [${instr.amt}] ${instr.side===res?'胜':'负'}` : `<br>观望`);
@@ -539,16 +581,21 @@
                     st.records[0].isComplete = true;
                 }
 
-                if (st.triggerMode !== 'hand') {
+                // 核心：处理套餐5的宏观单双记录
+                if (st.triggerMode === 'macro') {
+                    let isDouble = (groupRes === 'BB' || groupRes === 'PP');
+                    st.macroPattern.push(isDouble ? 'D' : 'S');
+                }
+
+                // 处理套餐1&2的A/B记录
+                if (st.triggerMode !== 'hand' && st.triggerMode !== 'macro') {
                     let hasA = groupRes.includes('B');
                     let hasB = groupRes.includes('P');
 
                     if (st.targetProp) {
                         if ((st.targetProp === 'A' && hasA) || (st.targetProp === 'B' && hasB)) {
                             st.streak++;
-                            if (st.streak >= 4 && st.bettingMode !== 'labouchere') {
-                                st.gameStatus = 'WON'; 
-                            }
+                            if (st.streak >= 4 && st.bettingMode !== 'labouchere') st.gameStatus = 'WON'; 
                         } else {
                             st.targetProp = null;
                             st.streak = 0;
@@ -573,11 +620,13 @@
                 st.currentH1Res = null;
                 st.groupPL = 0;
 
-                if (st.triggerMode !== 'hand' && st.bettingMode !== 'labouchere' && st.group > 16 && st.gameStatus === 'PLAYING') {
+                // 结束判定：只有套餐1和2才受16组限制
+                if (st.triggerMode !== 'hand' && st.triggerMode !== 'macro' && st.bettingMode !== 'labouchere' && st.group > 16 && st.gameStatus === 'PLAYING') {
                     st.gameStatus = 'GAMEOVER';
                 }
             }
 
+            // 处理套餐3的连续手触发判定
             if (st.gameStatus === 'PLAYING' && st.triggerMode === 'hand' && st.s3State === 'PHASE1' && st.flatHistory.length >= 2) {
                 let last2 = st.flatHistory.slice(-2);
                 if (last2[0] === 'B' && last2[1] === 'B') {
@@ -613,7 +662,7 @@
             if (!rawStr) { alert("没有检测到合法的序列！请确保包含 0 或 1。"); return; }
             
             let stratCombo = document.getElementById('simStratSelect').value.split('_');
-            let simTrig = stratCombo[0] === 'hand' ? 'hand' : parseInt(stratCombo[0]);
+            let simTrig = stratCombo[0] === 'hand' ? 'hand' : (stratCombo[0] === 'macro' ? 'macro' : parseInt(stratCombo[0]));
             let simBet = stratCombo[1];
 
             let simS = createFreshState(simTrig, simBet);
@@ -657,7 +706,7 @@
                     <span style="color:#aaa;">实际下注次数:</span> <span>${betActionCount} 次</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="color:#aaa;">策略打通/重启次数:</span> <span>${resetCount} 次</span>
+                    <span style="color:#aaa;">成功止盈重启:</span> <span>${resetCount} 局</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
                     <span style="color:#aaa;">资金最大回撤:</span> <span class="loss-color" style="font-weight:bold">${maxDrawdown} 分</span>
@@ -695,8 +744,10 @@
                     statusLabel.innerText = "⚠️ 游戏结束 - 周期窗口耗尽"; 
                     statusLabel.style.color = "var(--loss)";
                 } else {
-                    if (S.triggerMode === 'hand' && S.bettingMode === 'labouchere') {
-                        statusLabel.innerText = "🟢 套餐5运行中 - 连续拦截 + 拉布谢尔";
+                    if (S.triggerMode === 'macro') {
+                        statusLabel.innerText = "🟢 套餐5运行中 - 宏观单双接力";
+                    } else if (S.triggerMode === 'hand' && S.bettingMode === 'labouchere') {
+                        statusLabel.innerText = "🟢 套餐5附加运行 - 连续拦截拉布谢尔";
                     } else if (S.triggerMode === 'hand') {
                         statusLabel.innerText = "🟢 套餐3运行中 - 连续流水线拦截"; 
                     } else if (S.bettingMode === 'labouchere') {
@@ -721,7 +772,24 @@
                     document.getElementById('fibLevel').innerText = S.fibIdx;
                 }
                 
-                if (S.triggerMode === 'hand') {
+                if (S.triggerMode === 'macro') {
+                    // 套餐5专属面板
+                    document.getElementById('lblTrigger').innerText = '近端形态';
+                    let dispPattern = S.macroPattern.slice(-3).map(p => p==='D'?'双':'单').join('');
+                    document.getElementById('targetProp').innerText = dispPattern || '无';
+                    document.getElementById('targetProp').className = 'cum-val win-color';
+
+                    document.getElementById('lblStreak').innerText = '当前动作';
+                    document.getElementById('streakCount').innerText = S.hand===1 ? '等待空开' : '开火决策';
+                    document.getElementById('streakCount').className = 'cum-val wait-color';
+                    document.getElementById('streakRate').style.display = 'none';
+                    
+                    document.getElementById('lblProgress').innerText = '宏观接力模式 (INFINITE)';
+                    document.getElementById('regPercent').innerText = S.gameStatus==='WON'?'已止盈':'无限循环';
+                    document.getElementById('regFill').style.width = '100%';
+                    document.getElementById('regFill').style.background = S.gameStatus==='WON'?'var(--win)':'linear-gradient(90deg, #9932cc 0%, #ff1493 100%)';
+                    
+                } else if (S.triggerMode === 'hand') {
                     document.getElementById('lblTrigger').innerText = '当前阶段';
                     let pName = S.s3State === 'PHASE1' ? 'P1(观望)' : (S.s3State === 'PHASE2' ? 'P2(一裁)' : 'P3(二裁)');
                     document.getElementById('targetProp').innerText = pName;
@@ -788,8 +856,8 @@
                 wlList.scrollTop = wlList.scrollHeight;
 
                 let instr = getInstruction(S);
-                let infTag = (S.triggerMode === 'hand' || S.bettingMode === 'labouchere') ? ' (无限)' : '';
-                let displayGroup = (S.triggerMode === 'hand' || S.bettingMode === 'labouchere') ? S.group : Math.min(S.group, 16);
+                let infTag = (S.triggerMode === 'hand' || S.triggerMode === 'macro' || S.bettingMode === 'labouchere') ? ' (无限)' : '';
+                let displayGroup = (S.triggerMode === 'hand' || S.triggerMode === 'macro' || S.bettingMode === 'labouchere') ? S.group : Math.min(S.group, 16);
                 document.getElementById('phaseTag').innerText = `第 ${displayGroup} 组 | 位置 ${S.hand}${infTag}`;
                 
                 let dir = document.getElementById('instrDir');
@@ -822,16 +890,16 @@
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
             let saveObj = { id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData };
-            let hist = JSON.parse(localStorage.getItem('bacc_v12_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v13_hist')||'[]');
             hist.unshift(saveObj);
-            localStorage.setItem('bacc_v12_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v13_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
         function softResetEngine() {
             S = createFreshState(S.triggerMode, S.bettingMode);
             const { stack, ...dataToSave } = S;
-            localStorage.setItem('bacc_v12_session', JSON.stringify(dataToSave));
+            localStorage.setItem('bacc_v13_session', JSON.stringify(dataToSave));
         }
 
         function resetGame() { 
