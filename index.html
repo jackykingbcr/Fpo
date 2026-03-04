@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v11.0</title>
+    <title>Baccarat Sniper Max v12.0</title>
     <style>
         :root {
             --bg: #000000;
@@ -211,6 +211,7 @@
                 <option value="3_martingale">套餐 2：3连触发 (AAA/BBB) + 马丁格尔</option>
                 <option value="hand_martingale">套餐 3：连续手拦截 (000/0011) + 马丁格尔</option>
                 <option value="2_labouchere">套餐 4：2连触发 (AA/BB) + 拉布谢尔 (无限死磕)</option>
+                <option value="hand_labouchere">套餐 5：连续手拦截 + 拉布谢尔 (终极组合)</option>
             </select>
             <div style="font-size: 11px; color: #888; text-align: left; margin-top: 5px; line-height: 1.4;">
                 * 切换套餐后，当前棋局将自动重置以应用新规则。
@@ -235,6 +236,7 @@
                 <option value="3_martingale">套餐 2：3连触发 + 马丁格尔</option>
                 <option value="hand_martingale">套餐 3：连续手拦截 + 马丁格尔</option>
                 <option value="2_labouchere">套餐 4：2连触发 + 拉布谢尔</option>
+                <option value="hand_labouchere">套餐 5：连续手拦截 + 拉布谢尔</option>
             </select>
 
             <button class="modal-btn" style="background:#0a84ff; color:#fff;" onclick="runSimulation()">🚀 瞬间执行模拟</button>
@@ -250,7 +252,7 @@
                 <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
                 <button class="btn-small" style="background:#0a84ff; color:#fff; border:none;" onclick="openSim()">🔬 模拟</button>
             </div>
-            <span class="app-title">Sniper Pro Max v11.0</span>
+            <span class="app-title">Sniper Pro Max v12.0</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -324,7 +326,6 @@
         const CRED = { u: 'jacky', p: '66620598' };
         const FIB = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418];
 
-        // 提取核心状态初始化函数，供实战和模拟器复用
         function createFreshState(triggerMode, bettingMode) {
             return {
                 group: 1, hand: 1, history: [], fibIdx: 0, streak: 0,
@@ -343,8 +344,8 @@
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v11_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v11_session');
+            if (localStorage.getItem('bacc_v12_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v12_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2;
@@ -359,7 +360,7 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v11_logged_in', 'true');
+                localStorage.setItem('bacc_v12_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -372,7 +373,7 @@
 
         function logout() {
             if(confirm("确定要退出吗？")) {
-                localStorage.removeItem('bacc_v11_logged_in');
+                localStorage.removeItem('bacc_v12_logged_in');
                 location.reload();
             }
         }
@@ -413,11 +414,10 @@
         function autoSaveSession() {
             setTimeout(() => {
                 const { stack, ...dataToSave } = S; 
-                localStorage.setItem('bacc_v11_session', JSON.stringify(dataToSave));
+                localStorage.setItem('bacc_v12_session', JSON.stringify(dataToSave));
             }, 0);
         }
 
-        // --- 核心解耦：将下注金额和指令计算抽离，支持传入任意状态对象 (st) ---
         function calculateBetAmount(st) {
             if (st.bettingMode === 'martingale') {
                 return Math.pow(2, Math.min(st.fibIdx, 20)); 
@@ -468,7 +468,6 @@
             }
         }
 
-        // --- 核心解耦：纯逻辑引擎。无论是真实点击还是模拟跑数据，都调用这个函数修改状态 ---
         function runCoreLogic(res, st) {
             if (st.gameStatus !== 'PLAYING') return;
 
@@ -492,7 +491,10 @@
                         st.fibIdx = 0; 
                         st.s3State = 'PHASE1';
                         st.s3Target = null;
-                        if (st.totalPL > 0) st.gameStatus = 'WON';
+                        // 非拉布谢尔模式下，流水线有盈利就立刻止盈
+                        if (st.bettingMode !== 'labouchere' && st.totalPL > 0) {
+                            st.gameStatus = 'WON';
+                        }
                     }
                 } else {
                     st.wlHistory.push('❌');
@@ -586,7 +588,6 @@
             }
         }
 
-        // --- 真实对局点击函数 ---
         function input(res) {
             if (isProcessing) return; 
             isProcessing = true;
@@ -607,7 +608,6 @@
             }
         }
 
-        // --- 🤖 模拟器独立执行核心 ---
         function runSimulation() {
             let rawStr = document.getElementById('simInputText').value.replace(/[^01]/g, '');
             if (!rawStr) { alert("没有检测到合法的序列！请确保包含 0 或 1。"); return; }
@@ -616,7 +616,6 @@
             let simTrig = stratCombo[0] === 'hand' ? 'hand' : parseInt(stratCombo[0]);
             let simBet = stratCombo[1];
 
-            // 构建一个纯净的虚拟对局状态 (与实战S完全隔离)
             let simS = createFreshState(simTrig, simBet);
             
             let grandTotalPL = 0;
@@ -628,33 +627,29 @@
                 let mappedRes = rawStr[i] === '0' ? 'B' : 'P';
                 runCoreLogic(mappedRes, simS);
 
-                // 计算全局最大回撤
                 let liveBalance = grandTotalPL + simS.totalPL;
                 if (liveBalance < maxDrawdown) {
                     maxDrawdown = liveBalance;
                 }
 
-                // 如果达到止盈或窗口耗尽，模拟玩家重新启动对局
                 if (simS.gameStatus !== 'PLAYING') {
                     grandTotalPL += simS.totalPL;
                     betActionCount += simS.wlHistory.length;
                     resetCount++;
-                    simS = createFreshState(simTrig, simBet); // 自动重置
+                    simS = createFreshState(simTrig, simBet); 
                 }
             }
             
-            // 跑完所有序列后，加上最后一局未完结的盈亏
             if (simS.gameStatus === 'PLAYING') {
                 grandTotalPL += simS.totalPL;
                 betActionCount += simS.wlHistory.length;
             }
 
-            // 输出结果到面板
             let resBox = document.getElementById('simResult');
             let colorCls = grandTotalPL >= 0 ? 'win-color' : 'loss-color';
             let sign = grandTotalPL > 0 ? '+' : '';
             resBox.innerHTML = `
-                <div style="color:var(--accent); font-size:16px; margin-bottom:12px; font-weight:bold; border-bottom:1px solid #444; padding-bottom:6px;">📊 模拟执行完毕</div>
+                <div style="color:var(--accent); font-size:16px; margin-bottom:12px; font-weight:bold; border-bottom:1px solid #444; padding-bottom:6px;">📊 回测报告生成</div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                     <span style="color:#aaa;">处理总手数:</span> <span>${rawStr.length} 手</span>
                 </div>
@@ -662,10 +657,10 @@
                     <span style="color:#aaa;">实际下注次数:</span> <span>${betActionCount} 次</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="color:#aaa;">策略重启次数:</span> <span>${resetCount} 次</span>
+                    <span style="color:#aaa;">策略打通/重启次数:</span> <span>${resetCount} 次</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                    <span style="color:#aaa;">过程最大回撤:</span> <span class="loss-color" style="font-weight:bold">${maxDrawdown} 分</span>
+                    <span style="color:#aaa;">资金最大回撤:</span> <span class="loss-color" style="font-weight:bold">${maxDrawdown} 分</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; background:#111; padding:10px; border-radius:8px;">
                     <span style="color:#fff; font-weight:bold;">最终净盈亏:</span> 
@@ -700,7 +695,9 @@
                     statusLabel.innerText = "⚠️ 游戏结束 - 周期窗口耗尽"; 
                     statusLabel.style.color = "var(--loss)";
                 } else {
-                    if (S.triggerMode === 'hand') {
+                    if (S.triggerMode === 'hand' && S.bettingMode === 'labouchere') {
+                        statusLabel.innerText = "🟢 套餐5运行中 - 连续拦截 + 拉布谢尔";
+                    } else if (S.triggerMode === 'hand') {
                         statusLabel.innerText = "🟢 套餐3运行中 - 连续流水线拦截"; 
                     } else if (S.bettingMode === 'labouchere') {
                         statusLabel.innerText = "🟢 套餐4运行中 - 拉布谢尔无限死磕"; 
@@ -825,16 +822,16 @@
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
             let saveObj = { id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData };
-            let hist = JSON.parse(localStorage.getItem('bacc_v11_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v12_hist')||'[]');
             hist.unshift(saveObj);
-            localStorage.setItem('bacc_v11_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v12_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
         function softResetEngine() {
             S = createFreshState(S.triggerMode, S.bettingMode);
             const { stack, ...dataToSave } = S;
-            localStorage.setItem('bacc_v11_session', JSON.stringify(dataToSave));
+            localStorage.setItem('bacc_v12_session', JSON.stringify(dataToSave));
         }
 
         function resetGame() { 
