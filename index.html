@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v14.3</title>
+    <title>Baccarat Sniper Max v14.4</title>
     <style>
         :root {
             --bg: #000000;
@@ -37,7 +37,6 @@
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
         }
-        /* 增加最大高度和滚动，防止模拟器内容过多超出屏幕 */
         .modal-box { 
             width: 85%; max-width: 340px; max-height: 90vh; overflow-y: auto;
             text-align: center; background: #1c1c1e; padding: 25px 20px; 
@@ -45,7 +44,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
         
-        /* 隐藏滚动条让弹窗更美观 */
         .modal-box::-webkit-scrollbar { width: 0px; background: transparent; }
 
         .modal-input {
@@ -237,7 +235,7 @@
                 <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
                 <button class="btn-small" style="background:#0a84ff; color:#fff; border:none;" onclick="openSim()">🔬 模拟</button>
             </div>
-            <span class="app-title">Sniper Pro Max v14.3</span>
+            <span class="app-title">Sniper Pro Max v14.4</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -349,8 +347,8 @@
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v143_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v143_session');
+            if (localStorage.getItem('bacc_v144_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v144_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2;
@@ -371,7 +369,7 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v143_logged_in', 'true');
+                localStorage.setItem('bacc_v144_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -381,7 +379,7 @@
             document.getElementById('appLayer').style.display = 'flex';
             updateUI();
         }
-        function logout() { if(confirm("确定要退出吗？")) { localStorage.removeItem('bacc_v143_logged_in'); location.reload(); } }
+        function logout() { if(confirm("确定要退出吗？")) { localStorage.removeItem('bacc_v144_logged_in'); location.reload(); } }
         function openSettings() { document.getElementById('selStrategy').value = (S.triggerMode === 5 || S.triggerMode === 6 ? S.triggerMode : S.triggerMode) + '_' + S.bettingMode; document.getElementById('settingsLayer').style.display = 'flex'; }
         function closeSettings() { document.getElementById('settingsLayer').style.display = 'none'; }
         function openSim() { document.getElementById('simResult').style.display = 'none'; document.getElementById('simLayer').style.display = 'flex'; }
@@ -398,7 +396,7 @@
         }
 
         function autoSaveSession() {
-            setTimeout(() => { const { stack, ...dataToSave } = S; localStorage.setItem('bacc_v143_session', JSON.stringify(dataToSave)); }, 0);
+            setTimeout(() => { const { stack, ...dataToSave } = S; localStorage.setItem('bacc_v144_session', JSON.stringify(dataToSave)); }, 0);
         }
 
         function calculateBetAmount(st) {
@@ -502,32 +500,45 @@
             let actionText = "观望";
 
             if (st.triggerMode === 6) {
+                // 💡 修复：单边独立账本（c4_pl 和 c5_pl）不仅重置纸条，还要清零账本！
                 if (instr.bust4) {
-                    st.c4_seq = [1,1,1]; addSysLog(`🚨 【左脑策4】触发单边 -300 熔断割肉，已自动重生！`);
+                    st.c4_seq = [1,1,1]; 
+                    st.c4_pl = 0; // 彻底释放锁死
+                    addSysLog(`🚨 【左脑策4】触发单边 -300 熔断割肉，已自动重生！`);
                 } else if (instr.raw4 && instr.raw4.amt > 0) {
                     let isWin = (instr.raw4.side === res);
                     if (isWin) {
                         st.c4_pl += instr.raw4.amt; st.c4_seq.shift(); if(st.c4_seq.length>0) st.c4_seq.pop();
-                        if (st.c4_seq.length === 0) { st.c4_seq = [1,1,1]; addSysLog(`✅ 【左脑策4】成功止盈 +3！已重新载入纸条。`); }
+                        if (st.c4_seq.length === 0) { 
+                            st.c4_seq = [1,1,1]; 
+                            st.c4_pl = 0; // 止盈后也要清零账本
+                            addSysLog(`✅ 【左脑策4】成功止盈 +3！已重新载入纸条。`); 
+                        }
                     } else { st.c4_pl -= instr.raw4.amt; st.c4_seq.push(instr.raw4.amt); }
                 }
 
                 if (instr.bust5) {
-                    st.c5_seq = [1,1,1]; addSysLog(`🚨 【右脑策5】触发单边 -300 熔断割肉，已自动重生！`);
+                    st.c5_seq = [1,1,1]; 
+                    st.c5_pl = 0; // 彻底释放锁死
+                    addSysLog(`🚨 【右脑策5】触发单边 -300 熔断割肉，已自动重生！`);
                 } else if (instr.raw5 && instr.raw5.amt > 0) {
                     let isWin = (instr.raw5.side === res);
                     if (isWin) {
                         st.c5_pl += instr.raw5.amt; st.c5_seq.shift(); if(st.c5_seq.length>0) st.c5_seq.pop();
-                        if (st.c5_seq.length === 0) { st.c5_seq = [1,1,1]; addSysLog(`✅ 【右脑策5】成功止盈 +3！已重新载入纸条。`); }
+                        if (st.c5_seq.length === 0) { 
+                            st.c5_seq = [1,1,1]; 
+                            st.c5_pl = 0; // 止盈后清零
+                            addSysLog(`✅ 【右脑策5】成功止盈 +3！已重新载入纸条。`); 
+                        }
                     } else { st.c5_pl -= instr.raw5.amt; st.c5_seq.push(instr.raw5.amt); }
                 }
 
-                st.totalPL = st.c4_pl + st.c5_pl; 
-                
                 if (instr.amt > 0) {
                     let isWin = (instr.side === res);
                     actionText = `合打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`;
                     st.groupPL += (isWin ? instr.amt : -instr.amt);
+                    // 💡 修复：全局总资金由真实的合成对冲下注结果累加，脱离左右脑内部账本
+                    st.totalPL += (isWin ? instr.amt : -instr.amt); 
                     st.wlHistory.push(isWin ? '✅' : '❌');
                 }
             } 
@@ -639,9 +650,6 @@
             finally { updateUI(); setTimeout(() => { isProcessing = false; }, 50); }
         }
 
-        // ==========================
-        // 🏅 新增功能：蒙特卡洛随机模拟引擎
-        // ==========================
         function runRandomSimulation() {
             let countInput = document.getElementById('simRandomCount').value;
             let count = parseInt(countInput);
@@ -655,12 +663,10 @@
             }
 
             let rawStr = '';
-            // 纯正50%概率生成算法
             for (let i = 0; i < count; i++) {
                 rawStr += Math.random() < 0.5 ? '0' : '1';
             }
 
-            // 将生成的序列自动填入文本框供查阅，并自动执行回测
             document.getElementById('simInputText').value = rawStr;
             runSimulation();
         }
@@ -677,10 +683,11 @@
             for (let i = 0; i < rawStr.length; i++) {
                 let mappedRes = rawStr[i] === '0' ? 'B' : 'P';
                 runCoreLogic(mappedRes, simS);
+                
+                // 资金池极值监控
                 let liveBalance = grandTotalPL + simS.totalPL;
                 if (liveBalance < maxDrawdown) maxDrawdown = liveBalance;
                 
-                // 仅在非无限模式下（非双核挂机），碰到完结状态进行重置
                 if (simS.gameStatus !== 'PLAYING') { 
                     grandTotalPL += simS.totalPL; 
                     betActionCount += simS.wlHistory.length; 
@@ -698,7 +705,7 @@
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:#aaa;">实际下注次数:</span> <span>${betActionCount} 次</span></div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:#aaa;">单边策略止盈/止损次数:</span> <span>${resetCount || '无限循环中'}</span></div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span style="color:#aaa;">资金最大回撤 (极限低谷):</span> <span class="loss-color" style="font-weight:bold">${maxDrawdown} 分</span></div>
-                <div style="display:flex; justify-content:space-between; background:#111; padding:10px; border-radius:8px;"><span style="color:#fff; font-weight:bold;">最终净盈亏:</span> <span class="${colorCls}" style="font-size:20px; font-weight:900; font-family:monospace;">${grandTotalPL>0?'+':''}${grandTotalPL}</span></div>
+                <div style="display:flex; justify-content:space-between; background:#111; padding:10px; border-radius:8px;"><span style="color:#fff; font-weight:bold;">最终总净盈亏:</span> <span class="${colorCls}" style="font-size:20px; font-weight:900; font-family:monospace;">${grandTotalPL>0?'+':''}${grandTotalPL}</span></div>
             `;
             resBox.style.display = 'block';
         }
@@ -726,10 +733,10 @@
                 if (S.triggerMode === 6) {
                     labBox.style.display = 'none'; dualBox.style.display = 'grid';
                     document.getElementById('c4SeqText').innerText = S.c4_seq.length > 0 ? S.c4_seq.join(' - ') : '重置中';
-                    document.getElementById('c4PlText').innerText = `单边: ${S.c4_pl>0?'+':''}${S.c4_pl}`;
+                    document.getElementById('c4PlText').innerText = `本轮: ${S.c4_pl>0?'+':''}${S.c4_pl}`;
                     document.getElementById('c4PlText').className = `core-pl ${S.c4_pl>0?'win-color':(S.c4_pl<0?'loss-color':'')}`;
                     document.getElementById('c5SeqText').innerText = S.c5_seq.length > 0 ? S.c5_seq.join(' - ') : '重置中';
-                    document.getElementById('c5PlText').innerText = `单边: ${S.c5_pl>0?'+':''}${S.c5_pl}`;
+                    document.getElementById('c5PlText').innerText = `本轮: ${S.c5_pl>0?'+':''}${S.c5_pl}`;
                     document.getElementById('c5PlText').className = `core-pl ${S.c5_pl>0?'win-color':(S.c5_pl<0?'loss-color':'')}`;
                     document.getElementById('lblFibLevel').innerText = '全局状态'; document.getElementById('fibLevel').innerText = '并发中';
                     
@@ -806,9 +813,9 @@
 
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
-            let hist = JSON.parse(localStorage.getItem('bacc_v143_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v144_hist')||'[]');
             hist.unshift({ id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData });
-            localStorage.setItem('bacc_v143_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v144_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
