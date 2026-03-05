@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v13.1</title>
+    <title>Baccarat Sniper Max v13.2</title>
     <style>
         :root {
             --bg: #000000;
@@ -148,18 +148,38 @@
         .side-Wait { color: #888; }
 
         .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        
+        /* 🏅 升级后的电竞级物理按键样式 */
         .btn-big {
             padding: 18px; border: none; border-radius: 10px;
             font-size: 20px; font-weight: bold; color: white;
-            box-shadow: 0 4px 0 rgba(0,0,0,0.3);
-            transition: transform 0.1s;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.4); /* 加深底部阴影，立体感 */
+            transition: all 0.05s ease; /* 极速响应动画 */
             cursor: pointer;
             outline: none;
             -webkit-tap-highlight-color: transparent;
+            position: relative;
+            top: 0;
         }
         .bg-b { background: var(--banker-bg); }
         .bg-p { background: var(--player-bg); }
-        .btn-big:active { transform: scale(0.96); }
+        
+        /* 增加按下去的物理下压与变暗感 */
+        .btn-big:active { 
+            transform: scale(0.95); 
+            box-shadow: 0 2px 0 rgba(0,0,0,0.4); 
+            filter: brightness(0.7); 
+            top: 4px; 
+        }
+        
+        /* 处理中防连点的视觉锁定状态 */
+        .btn-disabled {
+            filter: grayscale(100%) opacity(0.5) !important; 
+            pointer-events: none; 
+            box-shadow: none !important;
+            top: 4px !important;
+            transform: scale(0.98);
+        }
 
         .table-wrap {
             flex-grow: 1; overflow-y: auto; background: #000;
@@ -249,7 +269,7 @@
                 <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
                 <button class="btn-small" style="background:#0a84ff; color:#fff; border:none;" onclick="openSim()">🔬 模拟</button>
             </div>
-            <span class="app-title">Sniper Pro Max v13.1</span>
+            <span class="app-title">Sniper Pro Max v13.2</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -341,8 +361,8 @@
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v131_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v131_session');
+            if (localStorage.getItem('bacc_v132_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v132_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2;
@@ -358,7 +378,7 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v131_logged_in', 'true');
+                localStorage.setItem('bacc_v132_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -371,7 +391,7 @@
 
         function logout() {
             if(confirm("确定要退出吗？")) {
-                localStorage.removeItem('bacc_v131_logged_in');
+                localStorage.removeItem('bacc_v132_logged_in');
                 location.reload();
             }
         }
@@ -412,7 +432,7 @@
         function autoSaveSession() {
             setTimeout(() => {
                 const { stack, ...dataToSave } = S; 
-                localStorage.setItem('bacc_v131_session', JSON.stringify(dataToSave));
+                localStorage.setItem('bacc_v132_session', JSON.stringify(dataToSave));
             }, 0);
         }
 
@@ -619,9 +639,27 @@
             }
         }
 
+        // ==========================
+        // 🏅 核心修复：触觉与视觉反馈
+        // ==========================
         function input(res) {
+            // 防并发死锁
             if (isProcessing) return; 
             isProcessing = true;
+
+            // 1. 物理震动反馈 (支持大部分手机端浏览器)
+            if (navigator.vibrate) {
+                navigator.vibrate(40); 
+            }
+
+            // 2. 视觉防呆锁定：瞬间变暗变灰，防止误触两下
+            const btnB = document.querySelector('.bg-b');
+            const btnP = document.querySelector('.bg-p');
+            if(btnB && btnP) {
+                btnB.classList.add('btn-disabled');
+                btnP.classList.add('btn-disabled');
+            }
+
             try {
                 if (S.gameStatus !== 'PLAYING') return;
 
@@ -636,13 +674,18 @@
             } finally {
                 autoSaveSession();
                 updateUI();
-                setTimeout(() => { isProcessing = false; }, 50); 
+                
+                // 3. 延迟解锁视觉反馈，让人眼明确看到“已经点过了”
+                setTimeout(() => { 
+                    isProcessing = false; 
+                    if(btnB && btnP) {
+                        btnB.classList.remove('btn-disabled');
+                        btnP.classList.remove('btn-disabled');
+                    }
+                }, 80); 
             }
         }
 
-        // ==========================
-        // 核心修复：撤销操作栈的防死锁安全逻辑
-        // ==========================
         function undo() {
             if (isProcessing) return;
             isProcessing = true;
@@ -651,7 +694,7 @@
                     const currentStack = S.stack;
                     const previousState = JSON.parse(currentStack.pop());
                     S = previousState;
-                    S.stack = currentStack; // 必须将历史记录重新绑定给新状态，防止丢失断档
+                    S.stack = currentStack; 
                     autoSaveSession();
                 }
             } catch (err) {
@@ -890,16 +933,16 @@
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
             let saveObj = { id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData };
-            let hist = JSON.parse(localStorage.getItem('bacc_v131_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v132_hist')||'[]');
             hist.unshift(saveObj);
-            localStorage.setItem('bacc_v131_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v132_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
         function softResetEngine() {
             S = createFreshState(S.triggerMode, S.bettingMode);
             const { stack, ...dataToSave } = S;
-            localStorage.setItem('bacc_v131_session', JSON.stringify(dataToSave));
+            localStorage.setItem('bacc_v132_session', JSON.stringify(dataToSave));
         }
 
         function resetGame() { 
