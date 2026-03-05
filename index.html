@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v14.0</title>
+    <title>Baccarat Sniper Max v14.1</title>
     <style>
         :root {
             --bg: #000000;
@@ -18,16 +18,15 @@
             --wait-bg: #555555;
         }
 
+        /* 修复：解除高度锁定，允许全局自然滚动 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Roboto, sans-serif;
             background-color: var(--bg);
             color: var(--text);
             margin: 0; padding: 0;
-            height: 100vh;
-            display: flex; flex-direction: column;
-            overflow: hidden;
-            transform: translateZ(0);
-            backface-visibility: hidden;
+            min-height: 100vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             -webkit-user-select: none;
             user-select: none;
         }
@@ -61,13 +60,14 @@
         }
         .btn-cancel { background: #444; color: #fff; }
 
-        #appLayer { display: none; height: 100%; flex-direction: column; }
+        #appLayer { display: none; min-height: 100vh; flex-direction: column; }
 
+        /* 修复：顶部工具栏吸附固定，下滑不消失 */
         .header {
             padding: 10px 15px; background: #111;
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid var(--border);
-            position: relative;
+            position: sticky; top: 0; z-index: 999;
         }
         .app-title { 
             font-weight: 800; font-size: 15px; color: #aaa; letter-spacing: 0.5px; 
@@ -106,7 +106,6 @@
         .reg-bar-bg { height: 6px; background: #333; border-radius: 3px; overflow: hidden; border: 1px solid #444; }
         .reg-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent) 0%, var(--win) 100%); box-shadow: 0 0 8px rgba(50, 215, 75, 0.2); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 
-        /* 单核纸条展示 */
         .labouchere-display {
             background: #111; border: 1px dashed #444; border-radius: 8px;
             padding: 8px; margin-bottom: 8px; text-align: center;
@@ -115,14 +114,12 @@
         }
         .labouchere-label { font-size: 10px; color: #888; display: block; margin-bottom: 4px; letter-spacing: normal; font-family: -apple-system, sans-serif; font-weight: normal; }
 
-        /* 👑 新增：双核控制台展示 */
         .dual-core-container { display: none; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
         .core-box { background: #111; border: 1px dashed #555; border-radius: 8px; padding: 8px; text-align: center; position: relative; }
         .core-title { font-size: 11px; color: #aaa; margin-bottom: 4px; font-weight: bold;}
         .core-seq { font-size: 14px; font-family: monospace; color: var(--accent); font-weight: bold; word-wrap: break-word;}
         .core-pl { font-size: 12px; font-weight: bold; margin-top: 5px; }
 
-        /* 👑 新增：系统电报播报台 */
         .sys-log-box {
             background: rgba(0,0,0,0.3); border-left: 3px solid #0a84ff; padding: 6px 10px;
             font-size: 11px; color: #ccc; margin-bottom: 8px; height: 32px; overflow-y: auto;
@@ -146,7 +143,6 @@
 
         .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         
-        /* 电竞级物理按键样式 */
         .btn-big {
             padding: 18px; border: none; border-radius: 10px; font-size: 20px; font-weight: bold; color: white;
             box-shadow: 0 6px 0 rgba(0,0,0,0.4); transition: all 0.05s ease; cursor: pointer;
@@ -158,9 +154,10 @@
         .btn-big:active { transform: scale(0.95); box-shadow: 0 2px 0 rgba(0,0,0,0.4); filter: brightness(0.7); top: 4px; }
         .btn-disabled { filter: grayscale(100%) opacity(0.5) !important; pointer-events: none; box-shadow: none !important; top: 4px !important; transform: scale(0.98); }
 
-        .table-wrap { flex-grow: 1; overflow-y: auto; background: #000; border-top: 1px solid var(--border); -webkit-overflow-scrolling: touch; contain: content; }
+        /* 修复：表格区域适配滚动 */
+        .table-wrap { flex-grow: 1; background: #000; border-top: 1px solid var(--border); padding-bottom: 40px; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; table-layout: fixed; }
-        th { color: #888; padding: 8px 2px; font-weight: bold; border-bottom: 1px solid #333; font-size: 12px; position: sticky; top: 0; background: #1a1a1a; z-index: 10; }
+        th { color: #888; padding: 8px 2px; font-weight: bold; border-bottom: 1px solid #333; font-size: 12px; position: sticky; top: 44px; background: #1a1a1a; z-index: 10; }
         td { padding: 10px 2px; border-bottom: 1px solid #222; color: #ddd; }
 
         .win-color { color: var(--win); }
@@ -231,7 +228,7 @@
                 <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
                 <button class="btn-small" style="background:#0a84ff; color:#fff; border:none;" onclick="openSim()">🔬 模拟</button>
             </div>
-            <span class="app-title">Sniper Pro Max v14.0</span>
+            <span class="app-title">Sniper Pro Max v14.1</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -331,7 +328,6 @@
                 s3State: 'PHASE1',
                 s3Target: null,
                 labouchereSeq: [1, 1, 1],
-                // 双核引擎专属虚拟状态
                 c4_seq: [1, 1, 1], c4_pl: 0,
                 c5_seq: [1, 1, 1], c5_pl: 0,
                 sysLogs: ["系统已初始化准备就绪。"]
@@ -342,8 +338,8 @@
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v14_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v14_session');
+            if (localStorage.getItem('bacc_v141_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v141_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2;
@@ -363,7 +359,7 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v14_logged_in', 'true');
+                localStorage.setItem('bacc_v141_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -373,7 +369,7 @@
             document.getElementById('appLayer').style.display = 'flex';
             updateUI();
         }
-        function logout() { if(confirm("确定要退出吗？")) { localStorage.removeItem('bacc_v14_logged_in'); location.reload(); } }
+        function logout() { if(confirm("确定要退出吗？")) { localStorage.removeItem('bacc_v141_logged_in'); location.reload(); } }
         function openSettings() { document.getElementById('selStrategy').value = (S.triggerMode === 5 || S.triggerMode === 6 ? S.triggerMode : S.triggerMode) + '_' + S.bettingMode; document.getElementById('settingsLayer').style.display = 'flex'; }
         function closeSettings() { document.getElementById('settingsLayer').style.display = 'none'; }
         function openSim() { document.getElementById('simResult').style.display = 'none'; document.getElementById('simLayer').style.display = 'flex'; }
@@ -390,7 +386,7 @@
         }
 
         function autoSaveSession() {
-            setTimeout(() => { const { stack, ...dataToSave } = S; localStorage.setItem('bacc_v14_session', JSON.stringify(dataToSave)); }, 0);
+            setTimeout(() => { const { stack, ...dataToSave } = S; localStorage.setItem('bacc_v141_session', JSON.stringify(dataToSave)); }, 0);
         }
 
         function calculateBetAmount(st) {
@@ -416,12 +412,10 @@
             if (st.gameStatus === 'GAMEOVER') return { side: null, amt: 0, msg: "🏁 窗口结束", detail: "组数耗尽" };
             if (st.triggerMode !== 'hand' && st.triggerMode !== 5 && st.triggerMode !== 6 && st.bettingMode !== 'labouchere' && st.group > 16) return { side: null, amt: 0, msg: "等待重置", detail: "-" };
 
-            // 👑 双核对冲引擎核心算法
             if (st.triggerMode === 6) {
                 let i4 = { side: null, amt: 0 };
                 let i5 = { side: null, amt: 0 };
 
-                // 左脑 策4 运算
                 if (st.targetProp) {
                     let betSide = st.targetProp === 'A' ? 'B' : 'P';
                     let amt4 = st.c4_seq.length === 1 ? st.c4_seq[0] : (st.c4_seq.length > 1 ? st.c4_seq[0] + st.c4_seq[st.c4_seq.length - 1] : 0);
@@ -430,7 +424,6 @@
                     }
                 }
 
-                // 右脑 策5 运算
                 let targetMacro = getMacroTarget(st.history);
                 if (targetMacro && st.hand === 2) {
                     let betSide = targetMacro === 'D' ? st.currentH1Res : (st.currentH1Res === 'B' ? 'P' : 'B');
@@ -438,7 +431,6 @@
                     i5 = { side: betSide, amt: amt5 };
                 }
 
-                // 单边独立 300 熔断判定 (熔断则本局不下注，留给 runCoreLogic 重置)
                 let actual_amt4 = i4.amt, bust4 = false;
                 if (st.c4_pl - actual_amt4 < -300) { actual_amt4 = 0; bust4 = true; }
                 let actual_amt5 = i5.amt, bust5 = false;
@@ -446,7 +438,6 @@
 
                 i4.amt = actual_amt4; i5.amt = actual_amt5;
 
-                // 物理合并对冲
                 let finalSide = null, finalAmt = 0;
                 if (i4.amt === 0 && i5.amt === 0) {
                     finalSide = null; finalAmt = 0;
@@ -469,7 +460,6 @@
                 return { side: finalSide, amt: finalAmt, msg: msg, detail: detail, raw4: i4, raw5: i5, bust4: bust4, bust5: bust5 };
             }
 
-            // 其他常规策略指令生成...
             let currentAmt = calculateBetAmount(st);
             if (st.triggerMode === 5) {
                 let targetMacro = getMacroTarget(st.history);
@@ -499,7 +489,6 @@
             let instr = getInstruction(st);
             let actionText = "观望";
 
-            // 👑 处理双核虚拟账单结算与自动重启
             if (st.triggerMode === 6) {
                 if (instr.bust4) {
                     st.c4_seq = [1,1,1]; addSysLog(`🚨 【左脑策4】触发单边 -300 熔断割肉，已自动重生！`);
@@ -521,7 +510,7 @@
                     } else { st.c5_pl -= instr.raw5.amt; st.c5_seq.push(instr.raw5.amt); }
                 }
 
-                st.totalPL = st.c4_pl + st.c5_pl; // 全局总账等于虚拟总账
+                st.totalPL = st.c4_pl + st.c5_pl; 
                 
                 if (instr.amt > 0) {
                     let isWin = (instr.side === res);
@@ -530,7 +519,6 @@
                     st.wlHistory.push(isWin ? '✅' : '❌');
                 }
             } 
-            // 常规结算
             else {
                 if (instr.amt > 0) {
                     let isWin = (instr.side === res);
@@ -675,7 +663,6 @@
                     statusLabel.style.color = "var(--accent)";
                 }
 
-                // UI 面板显隐切换
                 const labBox = document.getElementById('labouchereBox');
                 const dualBox = document.getElementById('dualCoreBox');
                 if (S.triggerMode === 6) {
@@ -735,7 +722,6 @@
                 document.getElementById('wlStatsText').innerText = `胜: ${wins} | 负: ${losses} | 胜率: ${(wins+losses)>0 ? Math.round((wins/(wins+losses))*100):0}%`;
                 const wlList = document.getElementById('wlList'); wlList.innerHTML = S.wlHistory.slice(-150).map(item => `<span class="${item==='✅'?'wl-item-win':'wl-item-loss'}">${item}</span>`).join(''); wlList.scrollTop = wlList.scrollHeight;
                 
-                // 播报台刷新
                 const logBox = document.getElementById('sysLogBox');
                 if (S.sysLogs && S.sysLogs.length > 0) {
                     logBox.innerHTML = S.sysLogs.map(l => `<div class="log-entry">${l}</div>`).join('');
@@ -761,9 +747,9 @@
 
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
-            let hist = JSON.parse(localStorage.getItem('bacc_v14_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v141_hist')||'[]');
             hist.unshift({ id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData });
-            localStorage.setItem('bacc_v14_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v141_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
