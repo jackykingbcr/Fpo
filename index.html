@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v13.2</title>
+    <title>Baccarat Sniper Max v14.0</title>
     <style>
         :root {
             --bg: #000000;
@@ -106,40 +106,37 @@
         .reg-bar-bg { height: 6px; background: #333; border-radius: 3px; overflow: hidden; border: 1px solid #444; }
         .reg-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent) 0%, var(--win) 100%); box-shadow: 0 0 8px rgba(50, 215, 75, 0.2); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 
+        /* 单核纸条展示 */
         .labouchere-display {
             background: #111; border: 1px dashed #444; border-radius: 8px;
             padding: 8px; margin-bottom: 8px; text-align: center;
             font-size: 16px; color: var(--accent); font-family: monospace; font-weight: bold;
-            display: none; 
-            word-wrap: break-word; letter-spacing: 1px;
+            display: none; word-wrap: break-word; letter-spacing: 1px;
         }
-        .labouchere-label {
-            font-size: 10px; color: #888; display: block; margin-bottom: 4px; 
-            letter-spacing: normal; font-family: -apple-system, sans-serif; font-weight: normal;
-        }
+        .labouchere-label { font-size: 10px; color: #888; display: block; margin-bottom: 4px; letter-spacing: normal; font-family: -apple-system, sans-serif; font-weight: normal; }
 
-        .instr-card {
-            background: linear-gradient(135deg, #3a3a3c, #2c2c2e);
-            border: 1px solid #444; border-radius: 12px;
-            padding: 15px; text-align: center; margin-bottom: 10px;
+        /* 👑 新增：双核控制台展示 */
+        .dual-core-container { display: none; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .core-box { background: #111; border: 1px dashed #555; border-radius: 8px; padding: 8px; text-align: center; position: relative; }
+        .core-title { font-size: 11px; color: #aaa; margin-bottom: 4px; font-weight: bold;}
+        .core-seq { font-size: 14px; font-family: monospace; color: var(--accent); font-weight: bold; word-wrap: break-word;}
+        .core-pl { font-size: 12px; font-weight: bold; margin-top: 5px; }
+
+        /* 👑 新增：系统电报播报台 */
+        .sys-log-box {
+            background: rgba(0,0,0,0.3); border-left: 3px solid #0a84ff; padding: 6px 10px;
+            font-size: 11px; color: #ccc; margin-bottom: 8px; height: 32px; overflow-y: auto;
+            border-radius: 0 8px 8px 0; display: flex; flex-direction: column; justify-content: flex-end;
         }
+        .log-entry { margin-top: 2px; }
+
+        .instr-card { background: linear-gradient(135deg, #3a3a3c, #2c2c2e); border: 1px solid #444; border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; }
         .phase-text { font-size: 12px; color: #aaa; margin-bottom: 5px; }
         .main-instr { font-size: 28px; font-weight: 900; line-height: 1.2; display: flex; justify-content: center; align-items: baseline; gap: 10px; }
         
-        .wl-container {
-            background: #111; border: 1px solid #333; border-radius: 8px;
-            padding: 10px; margin-bottom: 10px;
-        }
-        .wl-stats {
-            font-size: 11px; color: #888; margin-bottom: 6px;
-            border-bottom: 1px solid #222; padding-bottom: 4px;
-            display: flex; justify-content: space-between;
-        }
-        .wl-list {
-            display: flex; flex-wrap: wrap; gap: 4px; font-size: 14px;
-            min-height: 20px; max-height: 60px; overflow-y: auto;
-            align-content: flex-start;
-        }
+        .wl-container { background: #111; border: 1px solid #333; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+        .wl-stats { font-size: 11px; color: #888; margin-bottom: 6px; border-bottom: 1px solid #222; padding-bottom: 4px; display: flex; justify-content: space-between; }
+        .wl-list { display: flex; flex-wrap: wrap; gap: 4px; font-size: 14px; min-height: 20px; max-height: 60px; overflow-y: auto; align-content: flex-start; }
         .wl-item-win { color: var(--win); }
         .wl-item-loss { color: var(--loss); }
 
@@ -149,44 +146,19 @@
 
         .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         
-        /* 🏅 升级后的电竞级物理按键样式 */
+        /* 电竞级物理按键样式 */
         .btn-big {
-            padding: 18px; border: none; border-radius: 10px;
-            font-size: 20px; font-weight: bold; color: white;
-            box-shadow: 0 6px 0 rgba(0,0,0,0.4); /* 加深底部阴影，立体感 */
-            transition: all 0.05s ease; /* 极速响应动画 */
-            cursor: pointer;
-            outline: none;
-            -webkit-tap-highlight-color: transparent;
-            position: relative;
-            top: 0;
+            padding: 18px; border: none; border-radius: 10px; font-size: 20px; font-weight: bold; color: white;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.4); transition: all 0.05s ease; cursor: pointer;
+            outline: none; -webkit-tap-highlight-color: transparent; position: relative; top: 0;
         }
         .bg-b { background: var(--banker-bg); }
         .bg-p { background: var(--player-bg); }
         
-        /* 增加按下去的物理下压与变暗感 */
-        .btn-big:active { 
-            transform: scale(0.95); 
-            box-shadow: 0 2px 0 rgba(0,0,0,0.4); 
-            filter: brightness(0.7); 
-            top: 4px; 
-        }
-        
-        /* 处理中防连点的视觉锁定状态 */
-        .btn-disabled {
-            filter: grayscale(100%) opacity(0.5) !important; 
-            pointer-events: none; 
-            box-shadow: none !important;
-            top: 4px !important;
-            transform: scale(0.98);
-        }
+        .btn-big:active { transform: scale(0.95); box-shadow: 0 2px 0 rgba(0,0,0,0.4); filter: brightness(0.7); top: 4px; }
+        .btn-disabled { filter: grayscale(100%) opacity(0.5) !important; pointer-events: none; box-shadow: none !important; top: 4px !important; transform: scale(0.98); }
 
-        .table-wrap {
-            flex-grow: 1; overflow-y: auto; background: #000;
-            border-top: 1px solid var(--border);
-            -webkit-overflow-scrolling: touch;
-            contain: content;
-        }
+        .table-wrap { flex-grow: 1; overflow-y: auto; background: #000; border-top: 1px solid var(--border); -webkit-overflow-scrolling: touch; contain: content; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; table-layout: fixed; }
         th { color: #888; padding: 8px 2px; font-weight: bold; border-bottom: 1px solid #333; font-size: 12px; position: sticky; top: 0; background: #1a1a1a; z-index: 10; }
         td { padding: 10px 2px; border-bottom: 1px solid #222; color: #ddd; }
@@ -195,18 +167,8 @@
         .loss-color { color: var(--loss); }
         .wait-color { color: #888; }
 
-        .sim-textarea {
-            width: 100%; height: 100px; padding: 12px; margin: 8px 0 15px 0;
-            background: #111; border: 1px dashed #555; color: var(--accent);
-            border-radius: 8px; box-sizing: border-box; font-size: 14px;
-            font-family: monospace; outline: none; resize: none;
-        }
-        .sim-result-box {
-            background: #2c2c2e; padding: 15px; border-radius: 8px;
-            margin-top: 15px; text-align: left; font-size: 14px; border: 1px solid #444;
-            display: none;
-        }
-
+        .sim-textarea { width: 100%; height: 100px; padding: 12px; margin: 8px 0 15px 0; background: #111; border: 1px dashed #555; color: var(--accent); border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: monospace; outline: none; resize: none; }
+        .sim-result-box { background: #2c2c2e; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: left; font-size: 14px; border: 1px solid #444; display: none; }
     </style>
 </head>
 <body>
@@ -230,12 +192,11 @@
                 <option value="3_martingale">套餐 2：3连触发 (AAA/BBB) + 马丁格尔</option>
                 <option value="hand_martingale">套餐 3：连续手拦截 (000/0011) + 马丁格尔</option>
                 <option value="2_labouchere">套餐 4：2连触发 (AA/BB) + 拉布谢尔</option>
-                <option value="5_labouchere">套餐 5：大路四式接力 (双双/单单) + 拉布谢尔</option>
+                <option value="5_labouchere">套餐 5：大路四式接力 (单双) + 拉布谢尔</option>
+                <option value="6_labouchere">套餐 6：双核对冲引擎 (策4 + 策5 并发)</option>
             </select>
             <div style="font-size: 11px; color: #888; text-align: left; margin-top: 5px; line-height: 1.4;">
-                * 套餐5专属机制：宏观大路跟踪。<br>
-                引擎激活条件：双双博双，单单博单，双双单单博单，单单双双博双。<br>
-                动作：第1手空开让路，第2手根据目标形态补刀。
+                * 切换套餐后，当前棋局将自动重置以应用新规则。
             </div>
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button class="modal-btn btn-cancel" onclick="closeSettings()">取 消</button>
@@ -256,6 +217,7 @@
                 <option value="hand_martingale">套餐 3：连续手拦截 + 马丁格尔</option>
                 <option value="2_labouchere">套餐 4：2连触发 + 拉布谢尔</option>
                 <option value="5_labouchere">套餐 5：大路四式接力 + 拉布谢尔</option>
+                <option value="6_labouchere">套餐 6：双核对冲引擎 (策4 + 策5)</option>
             </select>
             <button class="modal-btn" style="background:#0a84ff; color:#fff;" onclick="runSimulation()">🚀 瞬间执行模拟</button>
             <button class="modal-btn btn-cancel" style="margin-top: 8px;" onclick="closeSim()">关 闭</button>
@@ -269,7 +231,7 @@
                 <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
                 <button class="btn-small" style="background:#0a84ff; color:#fff; border:none;" onclick="openSim()">🔬 模拟</button>
             </div>
-            <span class="app-title">Sniper Pro Max v13.2</span>
+            <span class="app-title">Sniper Pro Max v14.0</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -278,7 +240,7 @@
 
         <div class="dashboard">
             <div class="pl-display-area">
-                <div class="pl-label">账户总盈亏 (NET P/L)</div>
+                <div class="pl-label">账户总净盈亏 (NET P/L)</div>
                 <div class="pl-value win-color" id="totalPL">+0.00</div>
             </div>
 
@@ -292,20 +254,35 @@
             </div>
 
             <div class="reg-progress-area">
-                <div class="reg-label-row"><span id="lblProgress">组窗口进度 (WINDOW PROGRESS)</span><span id="regPercent">0%</span></div>
+                <div class="reg-label-row"><span id="lblProgress">窗口进度 (WINDOW PROGRESS)</span><span id="regPercent">0%</span></div>
                 <div class="reg-bar-bg"><div id="regFill" class="reg-bar-fill"></div></div>
             </div>
+
+            <div id="sysLogBox" class="sys-log-box"></div>
 
             <div id="labouchereBox" class="labouchere-display">
                 <span class="labouchere-label">当前消数序列 (LABOUCHERE SEQUENCE)</span>
                 <span id="labouchereSeqText">1 - 1 - 1</span>
             </div>
 
+            <div id="dualCoreBox" class="dual-core-container">
+                <div class="core-box">
+                    <div class="core-title">🧠 左脑 [策4: 庄闲连击]</div>
+                    <div class="core-seq" id="c4SeqText">1 - 1 - 1</div>
+                    <div class="core-pl" id="c4PlText" style="color:#aaa">单边: 0</div>
+                </div>
+                <div class="core-box">
+                    <div class="core-title">💡 右脑 [策5: 单双接力]</div>
+                    <div class="core-seq" id="c5SeqText">1 - 1 - 1</div>
+                    <div class="core-pl" id="c5PlText" style="color:#aaa">单边: 0</div>
+                </div>
+            </div>
+
             <div class="instr-card">
                 <div>
                     <div class="phase-text" id="phaseTag">等待开局 - 第 1 组 | 位置 1</div>
                     <div class="main-instr" id="mainInstr"><span id="instrDir" class="side-Wait">观 望</span><span id="instrAmt" style="font-size:20px; color:#fff"></span></div>
-                    <div style="font-size: 10px; color: #888; margin-top: 5px;" id="instrDetail">等待触发中...</div>
+                    <div style="font-size: 10px; color: #888; margin-top: 5px; min-height:12px;" id="instrDetail">等待触发中...</div>
                 </div>
             </div>
 
@@ -353,7 +330,11 @@
                 flatHistory: [],
                 s3State: 'PHASE1',
                 s3Target: null,
-                labouchereSeq: [1, 1, 1]
+                labouchereSeq: [1, 1, 1],
+                // 双核引擎专属虚拟状态
+                c4_seq: [1, 1, 1], c4_pl: 0,
+                c5_seq: [1, 1, 1], c5_pl: 0,
+                sysLogs: ["系统已初始化准备就绪。"]
             };
         }
 
@@ -361,24 +342,28 @@
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v132_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v132_session');
+            if (localStorage.getItem('bacc_v14_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v14_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2;
                     if(!S.bettingMode) S.bettingMode = 'fib';
                     if(!S.flatHistory) S.flatHistory = [];
-                    if(!S.s3State) S.s3State = 'PHASE1';
-                    if(!S.labouchereSeq) S.labouchereSeq = [1, 1, 1];
                     if(!S.stack) S.stack = [];
+                    if(!S.c4_seq) { S.c4_seq=[1,1,1]; S.c4_pl=0; S.c5_seq=[1,1,1]; S.c5_pl=0; S.sysLogs=["系统更新完毕。"]; }
                 }
                 enterApp();
             }
         };
 
+        function addSysLog(msg) {
+            S.sysLogs.push(msg);
+            if (S.sysLogs.length > 3) S.sysLogs.shift();
+        }
+
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v132_logged_in', 'true');
+                localStorage.setItem('bacc_v14_logged_in', 'true');
                 enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
@@ -388,65 +373,30 @@
             document.getElementById('appLayer').style.display = 'flex';
             updateUI();
         }
-
-        function logout() {
-            if(confirm("确定要退出吗？")) {
-                localStorage.removeItem('bacc_v132_logged_in');
-                location.reload();
-            }
-        }
-
-        function openSettings() {
-            document.getElementById('selStrategy').value = (S.triggerMode === 5 ? '5' : S.triggerMode) + '_' + S.bettingMode;
-            document.getElementById('settingsLayer').style.display = 'flex';
-        }
-
-        function closeSettings() {
-            document.getElementById('settingsLayer').style.display = 'none';
-        }
-
-        function openSim() {
-            document.getElementById('simResult').style.display = 'none';
-            document.getElementById('simLayer').style.display = 'flex';
-        }
-        function closeSim() {
-            document.getElementById('simLayer').style.display = 'none';
-        }
+        function logout() { if(confirm("确定要退出吗？")) { localStorage.removeItem('bacc_v14_logged_in'); location.reload(); } }
+        function openSettings() { document.getElementById('selStrategy').value = (S.triggerMode === 5 || S.triggerMode === 6 ? S.triggerMode : S.triggerMode) + '_' + S.bettingMode; document.getElementById('settingsLayer').style.display = 'flex'; }
+        function closeSettings() { document.getElementById('settingsLayer').style.display = 'none'; }
+        function openSim() { document.getElementById('simResult').style.display = 'none'; document.getElementById('simLayer').style.display = 'flex'; }
+        function closeSim() { document.getElementById('simLayer').style.display = 'none'; }
 
         function applySettings() {
             let comboValue = document.getElementById('selStrategy').value.split('_');
             let newTrig = comboValue[0] === 'hand' ? 'hand' : parseInt(comboValue[0]);
             let newBet = comboValue[1];
-            
             if (S.triggerMode !== newTrig || S.bettingMode !== newBet) {
-                S.triggerMode = newTrig;
-                S.bettingMode = newBet;
-                softResetEngine();
+                S.triggerMode = newTrig; S.bettingMode = newBet; softResetEngine();
             }
-            
-            closeSettings();
-            autoSaveSession();
-            updateUI();
+            closeSettings(); autoSaveSession(); updateUI();
         }
 
         function autoSaveSession() {
-            setTimeout(() => {
-                const { stack, ...dataToSave } = S; 
-                localStorage.setItem('bacc_v132_session', JSON.stringify(dataToSave));
-            }, 0);
+            setTimeout(() => { const { stack, ...dataToSave } = S; localStorage.setItem('bacc_v14_session', JSON.stringify(dataToSave)); }, 0);
         }
 
         function calculateBetAmount(st) {
-            if (st.bettingMode === 'martingale') {
-                return Math.pow(2, Math.min(st.fibIdx, 20)); 
-            } else if (st.bettingMode === 'labouchere') {
-                let seq = st.labouchereSeq;
-                if (seq.length === 0) return 0;
-                if (seq.length === 1) return seq[0];
-                return seq[0] + seq[seq.length - 1]; 
-            } else {
-                return st.fibIdx < FIB.length ? FIB[st.fibIdx] : FIB[FIB.length - 1];
-            }
+            if (st.bettingMode === 'martingale') return Math.pow(2, Math.min(st.fibIdx, 20)); 
+            if (st.bettingMode === 'labouchere') return st.labouchereSeq.length === 0 ? 0 : (st.labouchereSeq.length === 1 ? st.labouchereSeq[0] : st.labouchereSeq[0] + st.labouchereSeq[st.labouchereSeq.length - 1]);
+            return st.fibIdx < FIB.length ? FIB[st.fibIdx] : FIB[FIB.length - 1];
         }
 
         function getMacroTarget(hist) {
@@ -454,126 +404,155 @@
             let macros = hist.map(g => (g === 'BB' || g === 'PP') ? 'D' : 'S');
             let last2 = macros.slice(-2).join('');
             let last3 = macros.length >= 3 ? macros.slice(-3).join('') : '';
-
             if (last3 === 'DDS') return 'S';  
             if (last3 === 'SSD') return 'D';  
             if (last2 === 'DD') return 'D';   
             if (last2 === 'SS') return 'S';   
-
             return null; 
         }
 
         function getInstruction(st) {
             if (st.gameStatus === 'WON') return { side: null, amt: 0, msg: "🎯 止盈离场！", detail: "达成盈利收网" };
             if (st.gameStatus === 'GAMEOVER') return { side: null, amt: 0, msg: "🏁 窗口结束", detail: "组数耗尽" };
-            
-            if (st.triggerMode !== 'hand' && st.triggerMode !== 5 && st.bettingMode !== 'labouchere' && st.group > 16) return { side: null, amt: 0, msg: "等待重置", detail: "-" };
+            if (st.triggerMode !== 'hand' && st.triggerMode !== 5 && st.triggerMode !== 6 && st.bettingMode !== 'labouchere' && st.group > 16) return { side: null, amt: 0, msg: "等待重置", detail: "-" };
 
-            let currentAmt = calculateBetAmount(st);
+            // 👑 双核对冲引擎核心算法
+            if (st.triggerMode === 6) {
+                let i4 = { side: null, amt: 0 };
+                let i5 = { side: null, amt: 0 };
 
-            if (st.triggerMode === 5) {
-                let targetMacro = getMacroTarget(st.history);
-                if (!targetMacro) {
-                    return { side: null, amt: 0, msg: "观 望", detail: "寻找【双双】或【单单】信号..." };
-                }
-                
-                if (st.hand === 1) {
-                    return { side: null, amt: 0, msg: `空 开`, detail: `引擎锁【${targetMacro==='D'?'双':'单'}】，让路观察` };
-                } else {
-                    let betSide;
-                    if (targetMacro === 'D') {
-                        betSide = st.currentH1Res; 
-                    } else {
-                        betSide = st.currentH1Res === 'B' ? 'P' : 'B'; 
+                // 左脑 策4 运算
+                if (st.targetProp) {
+                    let betSide = st.targetProp === 'A' ? 'B' : 'P';
+                    let amt4 = st.c4_seq.length === 1 ? st.c4_seq[0] : (st.c4_seq.length > 1 ? st.c4_seq[0] + st.c4_seq[st.c4_seq.length - 1] : 0);
+                    if (st.hand === 1 || (st.hand === 2 && st.currentH1Res !== betSide)) {
+                        i4 = { side: betSide, amt: amt4 };
                     }
-                    return { side: betSide, amt: currentAmt, msg: `抓【${targetMacro==='D'?'双':'单'}】`, detail: `重注补枪：打 ${betSide==='B'?'庄(0)':'闲(1)'}` };
                 }
+
+                // 右脑 策5 运算
+                let targetMacro = getMacroTarget(st.history);
+                if (targetMacro && st.hand === 2) {
+                    let betSide = targetMacro === 'D' ? st.currentH1Res : (st.currentH1Res === 'B' ? 'P' : 'B');
+                    let amt5 = st.c5_seq.length === 1 ? st.c5_seq[0] : (st.c5_seq.length > 1 ? st.c5_seq[0] + st.c5_seq[st.c5_seq.length - 1] : 0);
+                    i5 = { side: betSide, amt: amt5 };
+                }
+
+                // 单边独立 300 熔断判定 (熔断则本局不下注，留给 runCoreLogic 重置)
+                let actual_amt4 = i4.amt, bust4 = false;
+                if (st.c4_pl - actual_amt4 < -300) { actual_amt4 = 0; bust4 = true; }
+                let actual_amt5 = i5.amt, bust5 = false;
+                if (st.c5_pl - actual_amt5 < -300) { actual_amt5 = 0; bust5 = true; }
+
+                i4.amt = actual_amt4; i5.amt = actual_amt5;
+
+                // 物理合并对冲
+                let finalSide = null, finalAmt = 0;
+                if (i4.amt === 0 && i5.amt === 0) {
+                    finalSide = null; finalAmt = 0;
+                } else if (i4.amt > 0 && i5.amt === 0) {
+                    finalSide = i4.side; finalAmt = i4.amt;
+                } else if (i5.amt > 0 && i4.amt === 0) {
+                    finalSide = i5.side; finalAmt = i5.amt;
+                } else {
+                    if (i4.side === i5.side) {
+                        finalSide = i4.side; finalAmt = i4.amt + i5.amt;
+                    } else {
+                        if (i4.amt > i5.amt) { finalSide = i4.side; finalAmt = i4.amt - i5.amt; }
+                        else if (i5.amt > i4.amt) { finalSide = i5.side; finalAmt = i5.amt - i4.amt; }
+                        else { finalSide = null; finalAmt = 0; }
+                    }
+                }
+
+                let msg = finalAmt > 0 ? `双核合成` : "观 望";
+                let detail = `策4: ${i4.amt>0 ? (i4.side==='B'?'庄':'闲')+i4.amt : '空'} | 策5: ${i5.amt>0 ? (i5.side==='B'?'庄':'闲')+i5.amt : '空'}`;
+                return { side: finalSide, amt: finalAmt, msg: msg, detail: detail, raw4: i4, raw5: i5, bust4: bust4, bust5: bust5 };
             }
 
+            // 其他常规策略指令生成...
+            let currentAmt = calculateBetAmount(st);
+            if (st.triggerMode === 5) {
+                let targetMacro = getMacroTarget(st.history);
+                if (!targetMacro) return { side: null, amt: 0, msg: "观 望", detail: "寻找【双双】或【单单】信号..." };
+                if (st.hand === 1) return { side: null, amt: 0, msg: `空 开`, detail: `引擎锁【${targetMacro==='D'?'双':'单'}】，让路观察` };
+                let betSide = targetMacro === 'D' ? st.currentH1Res : (st.currentH1Res === 'B' ? 'P' : 'B');
+                return { side: betSide, amt: currentAmt, msg: `抓【${targetMacro==='D'?'双':'单'}】`, detail: `重注补枪：打 ${betSide==='B'?'庄(0)':'闲(1)'}` };
+            }
             if (st.triggerMode === 'hand') {
-                if (st.s3State === 'PHASE2') {
-                    return { side: st.s3Target, amt: currentAmt, msg: `一裁抓 ${st.s3Target==='B'?'000':'111'}`, detail: `顺势拦截：打 ${st.s3Target==='B'?'0':'1'}` };
-                } else if (st.s3State === 'PHASE3') {
-                    return { side: st.s3Target, amt: currentAmt, msg: `二裁抓 ${st.s3Target==='B'?'1100':'0011'}`, detail: `反转换路：补刀打 ${st.s3Target==='B'?'0':'1'}` };
-                } else {
-                    return { side: null, amt: 0, msg: "观 望", detail: "寻找猎物：等待 00 或 11 触发..." };
-                }
+                if (st.s3State === 'PHASE2') return { side: st.s3Target, amt: currentAmt, msg: `一裁抓 ${st.s3Target==='B'?'000':'111'}`, detail: `顺势拦截：打 ${st.s3Target==='B'?'0':'1'}` };
+                else if (st.s3State === 'PHASE3') return { side: st.s3Target, amt: currentAmt, msg: `二裁抓 ${st.s3Target==='B'?'1100':'0011'}`, detail: `反转换路：补刀打 ${st.s3Target==='B'?'0':'1'}` };
+                return { side: null, amt: 0, msg: "观 望", detail: "寻找猎物：等待 00 或 11 触发..." };
             }
 
             let triggerName = st.triggerMode === 3 ? "AAA / BBB" : "AA / BB";
             if (st.targetProp) {
-                let betSide = st.targetProp === 'A' ? 'B' : 'P';
-                let targetName = st.targetProp === 'A' ? '庄(0)' : '闲(1)';
-                
-                if (st.hand === 1) {
-                    return { side: betSide, amt: currentAmt, msg: `狙击 ${targetName}`, detail: `博 ${st.targetProp.repeat(4)} 连击` };
-                } else {
-                    if (st.currentH1Res === betSide) {
-                        return { side: null, amt: 0, msg: "观 望 (H1已中)", detail: `达成目标` };
-                    } else {
-                        return { side: betSide, amt: currentAmt, msg: `追打 ${targetName}`, detail: `H1未中，H2补枪` };
-                    }
-                }
-            } else {
-                return { side: null, amt: 0, msg: "观 望", detail: `等待 ${triggerName} 触发中...` };
+                let betSide = st.targetProp === 'A' ? 'B' : 'P'; let targetName = st.targetProp === 'A' ? '庄(0)' : '闲(1)';
+                if (st.hand === 1) return { side: betSide, amt: currentAmt, msg: `狙击 ${targetName}`, detail: `博 ${st.targetProp.repeat(4)} 连击` };
+                if (st.currentH1Res === betSide) return { side: null, amt: 0, msg: "观 望 (H1已中)", detail: `达成目标` };
+                return { side: betSide, amt: currentAmt, msg: `追打 ${targetName}`, detail: `H1未中，H2补枪` };
             }
+            return { side: null, amt: 0, msg: "观 望", detail: `等待 ${triggerName} 触发中...` };
         }
 
         function runCoreLogic(res, st) {
             if (st.gameStatus !== 'PLAYING') return;
-
             let instr = getInstruction(st);
             let actionText = "观望";
 
-            if (instr.amt > 0) {
-                let isWin = (instr.side === res);
-                if (isWin) {
-                    st.wlHistory.push('✅');
-                    st.totalPL += instr.amt;
-                    st.groupPL += instr.amt;
-                    
-                    if (st.bettingMode === 'labouchere') {
-                        st.labouchereSeq.shift(); 
-                        if (st.labouchereSeq.length > 0) st.labouchereSeq.pop(); 
-                        if (st.labouchereSeq.length === 0) st.gameStatus = 'WON'; 
-                    }
-
-                    if (st.triggerMode === 'hand') {
-                        st.fibIdx = 0; 
-                        st.s3State = 'PHASE1';
-                        st.s3Target = null;
-                        if (st.bettingMode !== 'labouchere' && st.totalPL > 0) st.gameStatus = 'WON';
-                    }
-                } else {
-                    st.wlHistory.push('❌');
-                    st.totalPL -= instr.amt;
-                    st.groupPL -= instr.amt;
-
-                    if (st.bettingMode === 'labouchere') {
-                        st.labouchereSeq.push(instr.amt);
-                    }
-
-                    if (st.triggerMode === 'hand') {
-                        st.fibIdx++;
-                        if (st.s3State === 'PHASE2') {
-                            st.s3State = 'PHASE3'; 
-                            st.s3Target = res;     
-                        } else if (st.s3State === 'PHASE3') {
-                            st.s3State = 'PHASE1'; 
-                            st.s3Target = null;
-                        }
-                    }
+            // 👑 处理双核虚拟账单结算与自动重启
+            if (st.triggerMode === 6) {
+                if (instr.bust4) {
+                    st.c4_seq = [1,1,1]; addSysLog(`🚨 【左脑策4】触发单边 -300 熔断割肉，已自动重生！`);
+                } else if (instr.raw4 && instr.raw4.amt > 0) {
+                    let isWin = (instr.raw4.side === res);
+                    if (isWin) {
+                        st.c4_pl += instr.raw4.amt; st.c4_seq.shift(); if(st.c4_seq.length>0) st.c4_seq.pop();
+                        if (st.c4_seq.length === 0) { st.c4_seq = [1,1,1]; addSysLog(`✅ 【左脑策4】成功止盈 +3！已重新载入纸条。`); }
+                    } else { st.c4_pl -= instr.raw4.amt; st.c4_seq.push(instr.raw4.amt); }
                 }
-                if (st.triggerMode !== 'hand' && st.triggerMode !== 5 && st.bettingMode !== 'labouchere') st.fibIdx++; 
-                actionText = `打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`;
+
+                if (instr.bust5) {
+                    st.c5_seq = [1,1,1]; addSysLog(`🚨 【右脑策5】触发单边 -300 熔断割肉，已自动重生！`);
+                } else if (instr.raw5 && instr.raw5.amt > 0) {
+                    let isWin = (instr.raw5.side === res);
+                    if (isWin) {
+                        st.c5_pl += instr.raw5.amt; st.c5_seq.shift(); if(st.c5_seq.length>0) st.c5_seq.pop();
+                        if (st.c5_seq.length === 0) { st.c5_seq = [1,1,1]; addSysLog(`✅ 【右脑策5】成功止盈 +3！已重新载入纸条。`); }
+                    } else { st.c5_pl -= instr.raw5.amt; st.c5_seq.push(instr.raw5.amt); }
+                }
+
+                st.totalPL = st.c4_pl + st.c5_pl; // 全局总账等于虚拟总账
+                
+                if (instr.amt > 0) {
+                    let isWin = (instr.side === res);
+                    actionText = `合打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`;
+                    st.groupPL += (isWin ? instr.amt : -instr.amt);
+                    st.wlHistory.push(isWin ? '✅' : '❌');
+                }
+            } 
+            // 常规结算
+            else {
+                if (instr.amt > 0) {
+                    let isWin = (instr.side === res);
+                    if (isWin) {
+                        st.wlHistory.push('✅'); st.totalPL += instr.amt; st.groupPL += instr.amt;
+                        if (st.bettingMode === 'labouchere') { st.labouchereSeq.shift(); if (st.labouchereSeq.length > 0) st.labouchereSeq.pop(); if (st.labouchereSeq.length === 0) st.gameStatus = 'WON'; }
+                        if (st.triggerMode === 'hand') { st.fibIdx = 0; st.s3State = 'PHASE1'; st.s3Target = null; if (st.bettingMode !== 'labouchere' && st.totalPL > 0) st.gameStatus = 'WON'; }
+                    } else {
+                        st.wlHistory.push('❌'); st.totalPL -= instr.amt; st.groupPL -= instr.amt;
+                        if (st.bettingMode === 'labouchere') st.labouchereSeq.push(instr.amt);
+                        if (st.triggerMode === 'hand') { st.fibIdx++; if (st.s3State === 'PHASE2') { st.s3State = 'PHASE3'; st.s3Target = res; } else if (st.s3State === 'PHASE3') { st.s3State = 'PHASE1'; st.s3Target = null; } }
+                    }
+                    if (st.triggerMode !== 'hand' && st.triggerMode !== 5 && st.bettingMode !== 'labouchere') st.fibIdx++; 
+                    actionText = `打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`;
+                }
             }
 
             if(!st.flatHistory) st.flatHistory = [];
             st.flatHistory.push(res);
 
             if (st.hand === 1) {
-                st.currentH1Res = res;
-                st.hand = 2;
+                st.currentH1Res = res; st.hand = 2;
                 st.records.unshift({ id: st.group, h1: res, h2: '-', action: actionText, pl: st.groupPL, totalPL: st.totalPL, isComplete: false });
             } else {
                 let groupRes = st.currentH1Res + res;
@@ -581,350 +560,200 @@
 
                 if(st.records.length > 0 && !st.records[0].isComplete) {
                     st.records[0].h2 = res;
-                    st.records[0].action += (instr.amt>0 ? `<br>打${instr.side==='B'?'0':'1'} [${instr.amt}] ${instr.side===res?'胜':'负'}` : `<br>观望`);
+                    st.records[0].action += (instr.amt>0 && st.triggerMode !== 6 ? `<br>打${instr.side==='B'?'0':'1'} [${instr.amt}] ${instr.side===res?'胜':'负'}` : (instr.amt>0 ? '' : `<br>观望`));
                     st.records[0].pl = st.groupPL;
                     st.records[0].totalPL = st.totalPL;
                     st.records[0].isComplete = true;
                 }
 
-                if (st.triggerMode === 5) {
-                    st.targetProp = getMacroTarget(st.history);
-                } 
-                else if (st.triggerMode !== 'hand') {
-                    let hasA = groupRes.includes('B');
-                    let hasB = groupRes.includes('P');
-
+                if (st.triggerMode === 5 || st.triggerMode === 6) { st.targetProp = getMacroTarget(st.history); } 
+                if (st.triggerMode !== 'hand' && st.triggerMode !== 5 && st.triggerMode !== 6) {
+                    let hasA = groupRes.includes('B'), hasB = groupRes.includes('P');
                     if (st.targetProp) {
-                        if ((st.targetProp === 'A' && hasA) || (st.targetProp === 'B' && hasB)) {
-                            st.streak++;
-                            if (st.streak >= 4 && st.bettingMode !== 'labouchere') {
-                                st.gameStatus = 'WON'; 
-                            }
-                        } else {
-                            st.targetProp = null;
-                            st.streak = 0;
-                        }
+                        if ((st.targetProp === 'A' && hasA) || (st.targetProp === 'B' && hasB)) { st.streak++; if (st.streak >= 4 && st.bettingMode !== 'labouchere') st.gameStatus = 'WON'; } 
+                        else { st.targetProp = null; st.streak = 0; }
                     }
-
                     let tLen = st.triggerMode;
                     if (!st.targetProp && st.gameStatus === 'PLAYING' && st.history.length >= tLen) {
                         let isAllA = true, isAllB = true;
-                        for(let i = 1; i <= tLen; i++) {
-                            let h = st.history[st.history.length - i];
-                            if(!h.includes('B')) isAllA = false;
-                            if(!h.includes('P')) isAllB = false;
-                        }
-                        if (isAllA) { st.targetProp = 'A'; st.streak = tLen; } 
-                        else if (isAllB) { st.targetProp = 'B'; st.streak = tLen; }
+                        for(let i = 1; i <= tLen; i++) { let h = st.history[st.history.length - i]; if(!h.includes('B')) isAllA = false; if(!h.includes('P')) isAllB = false; }
+                        if (isAllA) { st.targetProp = 'A'; st.streak = tLen; } else if (isAllB) { st.targetProp = 'B'; st.streak = tLen; }
                     }
                 }
 
-                st.group++;
-                st.hand = 1;
-                st.currentH1Res = null;
-                st.groupPL = 0;
-
-                if (st.triggerMode !== 'hand' && st.triggerMode !== 5 && st.bettingMode !== 'labouchere' && st.group > 16 && st.gameStatus === 'PLAYING') {
-                    st.gameStatus = 'GAMEOVER';
-                }
+                st.group++; st.hand = 1; st.currentH1Res = null; st.groupPL = 0;
+                if (st.triggerMode !== 'hand' && st.triggerMode !== 5 && st.triggerMode !== 6 && st.bettingMode !== 'labouchere' && st.group > 16 && st.gameStatus === 'PLAYING') { st.gameStatus = 'GAMEOVER'; }
             }
 
             if (st.gameStatus === 'PLAYING' && st.triggerMode === 'hand' && st.s3State === 'PHASE1' && st.flatHistory.length >= 2) {
                 let last2 = st.flatHistory.slice(-2);
-                if (last2[0] === 'B' && last2[1] === 'B') {
-                    st.s3State = 'PHASE2'; st.s3Target = 'B';
-                } else if (last2[0] === 'P' && last2[1] === 'P') {
-                    st.s3State = 'PHASE2'; st.s3Target = 'P';
-                }
+                if (last2[0] === 'B' && last2[1] === 'B') { st.s3State = 'PHASE2'; st.s3Target = 'B'; } 
+                else if (last2[0] === 'P' && last2[1] === 'P') { st.s3State = 'PHASE2'; st.s3Target = 'P'; }
             }
         }
 
-        // ==========================
-        // 🏅 核心修复：触觉与视觉反馈
-        // ==========================
         function input(res) {
-            // 防并发死锁
             if (isProcessing) return; 
             isProcessing = true;
-
-            // 1. 物理震动反馈 (支持大部分手机端浏览器)
-            if (navigator.vibrate) {
-                navigator.vibrate(40); 
-            }
-
-            // 2. 视觉防呆锁定：瞬间变暗变灰，防止误触两下
-            const btnB = document.querySelector('.bg-b');
-            const btnP = document.querySelector('.bg-p');
-            if(btnB && btnP) {
-                btnB.classList.add('btn-disabled');
-                btnP.classList.add('btn-disabled');
-            }
+            if (navigator.vibrate) navigator.vibrate(40); 
+            const btnB = document.querySelector('.bg-b'), btnP = document.querySelector('.bg-p');
+            if(btnB && btnP) { btnB.classList.add('btn-disabled'); btnP.classList.add('btn-disabled'); }
 
             try {
                 if (S.gameStatus !== 'PLAYING') return;
-
                 if (!S.stack) S.stack = [];
                 const { stack, ...snapshotData } = S;
                 S.stack.push(JSON.stringify(snapshotData));
                 if (S.stack.length > 20) S.stack.shift(); 
-
                 runCoreLogic(res, S);
-            } catch (err) {
-                console.error(err);
-            } finally {
-                autoSaveSession();
-                updateUI();
-                
-                // 3. 延迟解锁视觉反馈，让人眼明确看到“已经点过了”
-                setTimeout(() => { 
-                    isProcessing = false; 
-                    if(btnB && btnP) {
-                        btnB.classList.remove('btn-disabled');
-                        btnP.classList.remove('btn-disabled');
-                    }
-                }, 80); 
+            } catch (err) { console.error(err); } 
+            finally {
+                autoSaveSession(); updateUI();
+                setTimeout(() => { isProcessing = false; if(btnB && btnP) { btnB.classList.remove('btn-disabled'); btnP.classList.remove('btn-disabled'); } }, 80); 
             }
         }
 
         function undo() {
-            if (isProcessing) return;
-            isProcessing = true;
+            if (isProcessing) return; isProcessing = true;
             try {
                 if (S.stack && S.stack.length > 0) {
                     const currentStack = S.stack;
-                    const previousState = JSON.parse(currentStack.pop());
-                    S = previousState;
+                    S = JSON.parse(currentStack.pop());
                     S.stack = currentStack; 
+                    addSysLog("⏪ 执行撤销上一步操作。");
                     autoSaveSession();
                 }
-            } catch (err) {
-                console.error("撤销发生异常:", err);
-            } finally {
-                updateUI();
-                setTimeout(() => { isProcessing = false; }, 50);
-            }
+            } catch (err) { console.error(err); } 
+            finally { updateUI(); setTimeout(() => { isProcessing = false; }, 50); }
         }
 
         function runSimulation() {
             let rawStr = document.getElementById('simInputText').value.replace(/[^01]/g, '');
-            if (!rawStr) { alert("没有检测到合法的序列！请确保包含 0 或 1。"); return; }
-            
+            if (!rawStr) { alert("没有检测到合法的序列！"); return; }
             let stratCombo = document.getElementById('simStratSelect').value.split('_');
-            let simTrig = (stratCombo[0] === 'hand' || stratCombo[0] === '5') ? (stratCombo[0] === 'hand' ? 'hand' : 5) : parseInt(stratCombo[0]);
+            let simTrig = (stratCombo[0] === 'hand' || stratCombo[0] === '5' || stratCombo[0] === '6') ? (stratCombo[0] === 'hand' ? 'hand' : parseInt(stratCombo[0])) : parseInt(stratCombo[0]);
             let simBet = stratCombo[1];
-
             let simS = createFreshState(simTrig, simBet);
-            
-            let grandTotalPL = 0;
-            let resetCount = 0;
-            let maxDrawdown = 0;
-            let betActionCount = 0;
+            let grandTotalPL = 0, resetCount = 0, maxDrawdown = 0, betActionCount = 0;
 
             for (let i = 0; i < rawStr.length; i++) {
                 let mappedRes = rawStr[i] === '0' ? 'B' : 'P';
                 runCoreLogic(mappedRes, simS);
-
                 let liveBalance = grandTotalPL + simS.totalPL;
-                if (liveBalance < maxDrawdown) {
-                    maxDrawdown = liveBalance;
-                }
-
-                if (simS.gameStatus !== 'PLAYING') {
-                    grandTotalPL += simS.totalPL;
-                    betActionCount += simS.wlHistory.length;
-                    resetCount++;
-                    simS = createFreshState(simTrig, simBet); 
-                }
+                if (liveBalance < maxDrawdown) maxDrawdown = liveBalance;
+                if (simS.gameStatus !== 'PLAYING') { grandTotalPL += simS.totalPL; betActionCount += simS.wlHistory.length; resetCount++; simS = createFreshState(simTrig, simBet); }
             }
-            
-            if (simS.gameStatus === 'PLAYING') {
-                grandTotalPL += simS.totalPL;
-                betActionCount += simS.wlHistory.length;
-            }
+            if (simS.gameStatus === 'PLAYING') { grandTotalPL += simS.totalPL; betActionCount += simS.wlHistory.length; }
 
             let resBox = document.getElementById('simResult');
             let colorCls = grandTotalPL >= 0 ? 'win-color' : 'loss-color';
-            let sign = grandTotalPL > 0 ? '+' : '';
             resBox.innerHTML = `
-                <div style="color:var(--accent); font-size:16px; margin-bottom:12px; font-weight:bold; border-bottom:1px solid #444; padding-bottom:6px;">📊 模拟执行完毕</div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="color:#aaa;">处理总手数:</span> <span>${rawStr.length} 手</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="color:#aaa;">实际下注次数:</span> <span>${betActionCount} 次</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="color:#aaa;">策略打通/重启次数:</span> <span>${resetCount} 次</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                    <span style="color:#aaa;">资金最大回撤:</span> <span class="loss-color" style="font-weight:bold">${maxDrawdown} 分</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; background:#111; padding:10px; border-radius:8px;">
-                    <span style="color:#fff; font-weight:bold;">最终净盈亏:</span> 
-                    <span class="${colorCls}" style="font-size:20px; font-weight:900; font-family:monospace;">${sign}${grandTotalPL}</span>
-                </div>
+                <div style="color:var(--accent); font-size:16px; margin-bottom:12px; font-weight:bold; border-bottom:1px solid #444; padding-bottom:6px;">📊 模拟完毕</div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:#aaa;">处理总手数:</span> <span>${rawStr.length} 手</span></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:#aaa;">实际下注次数:</span> <span>${betActionCount} 次</span></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span style="color:#aaa;">资金最大回撤:</span> <span class="loss-color" style="font-weight:bold">${maxDrawdown} 分</span></div>
+                <div style="display:flex; justify-content:space-between; background:#111; padding:10px; border-radius:8px;"><span style="color:#fff; font-weight:bold;">最终净盈亏:</span> <span class="${colorCls}" style="font-size:20px; font-weight:900; font-family:monospace;">${grandTotalPL>0?'+':''}${grandTotalPL}</span></div>
             `;
             resBox.style.display = 'block';
         }
 
         function updateUI() {
             window.requestAnimationFrame(() => {
-                const wins = S.wlHistory.filter(x => x === '✅').length;
-                const losses = S.wlHistory.filter(x => x === '❌').length;
-                const winRate = (wins + losses) > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
-                
+                const wins = S.wlHistory.filter(x => x === '✅').length; const losses = S.wlHistory.filter(x => x === '❌').length;
                 document.getElementById('totalPL').innerText = (S.totalPL > 0 ? "+" : "") + S.totalPL;
                 document.getElementById('totalPL').className = S.totalPL > 0 ? 'pl-value win-color' : (S.totalPL < 0 ? 'pl-value loss-color' : 'pl-value');
                 
                 let statusLabel = document.getElementById('gameStatusLabel');
-                if (S.gameStatus === 'WON') {
-                    statusLabel.innerText = "🎉 挑战成功 - 盈利收网离场"; 
-                    statusLabel.style.color = "var(--win)";
-                } else if (S.gameStatus === 'GAMEOVER') {
-                    statusLabel.innerText = "⚠️ 游戏结束 - 周期窗口耗尽"; 
-                    statusLabel.style.color = "var(--loss)";
-                } else {
-                    if (S.triggerMode === 5) {
-                        statusLabel.innerText = "🟢 套餐5运行中 - 大路四式单双接力";
-                    } else if (S.triggerMode === 'hand') {
-                        statusLabel.innerText = "🟢 套餐3运行中 - 连续流水线拦截"; 
-                    } else if (S.bettingMode === 'labouchere') {
-                        statusLabel.innerText = "🟢 套餐4运行中 - 拉布谢尔无限死磕"; 
-                    } else {
-                        statusLabel.innerText = "🟢 套餐1/2运行中 - 动态追踪模式"; 
-                    }
+                if (S.gameStatus === 'WON') { statusLabel.innerText = "🎉 挑战成功 - 盈利收网离场"; statusLabel.style.color = "var(--win)"; } 
+                else if (S.gameStatus === 'GAMEOVER') { statusLabel.innerText = "⚠️ 游戏结束 - 周期窗口耗尽"; statusLabel.style.color = "var(--loss)"; } 
+                else {
+                    if (S.triggerMode === 6) { statusLabel.innerText = "🟣 套餐6运行中 - 双核并发对冲模式 (永动机)"; }
+                    else if (S.triggerMode === 5) { statusLabel.innerText = "🟢 套餐5运行中 - 大路四式单双接力"; } 
+                    else if (S.triggerMode === 'hand') { statusLabel.innerText = "🟢 套餐3运行中 - 连续流水线拦截"; } 
+                    else if (S.bettingMode === 'labouchere') { statusLabel.innerText = "🟢 套餐4运行中 - 拉布谢尔无限死磕"; } 
+                    else { statusLabel.innerText = "🟢 套餐1/2运行中 - 动态追踪模式"; }
                     statusLabel.style.color = "var(--accent)";
                 }
 
+                // UI 面板显隐切换
                 const labBox = document.getElementById('labouchereBox');
-                if (S.bettingMode === 'labouchere') {
-                    labBox.style.display = 'block';
-                    document.getElementById('lblFibLevel').innerText = '消数余量';
-                    document.getElementById('fibLevel').innerText = S.labouchereSeq.length + '项';
-                    let seqDisplay = S.labouchereSeq.length > 0 ? S.labouchereSeq.join(' - ') : '已清空 (等待重置)';
-                    document.getElementById('labouchereSeqText').innerText = seqDisplay;
-                } else {
-                    labBox.style.display = 'none';
-                    document.getElementById('lblFibLevel').innerText = S.bettingMode === 'martingale' ? '注码(马丁)' : '注码(斐波)';
-                    document.getElementById('fibLevel').innerText = S.fibIdx;
-                }
-                
-                if (S.triggerMode === 5) {
+                const dualBox = document.getElementById('dualCoreBox');
+                if (S.triggerMode === 6) {
+                    labBox.style.display = 'none'; dualBox.style.display = 'grid';
+                    document.getElementById('c4SeqText').innerText = S.c4_seq.length > 0 ? S.c4_seq.join(' - ') : '重置中';
+                    document.getElementById('c4PlText').innerText = `单边: ${S.c4_pl>0?'+':''}${S.c4_pl}`;
+                    document.getElementById('c4PlText').className = `core-pl ${S.c4_pl>0?'win-color':(S.c4_pl<0?'loss-color':'')}`;
+                    document.getElementById('c5SeqText').innerText = S.c5_seq.length > 0 ? S.c5_seq.join(' - ') : '重置中';
+                    document.getElementById('c5PlText').innerText = `单边: ${S.c5_pl>0?'+':''}${S.c5_pl}`;
+                    document.getElementById('c5PlText').className = `core-pl ${S.c5_pl>0?'win-color':(S.c5_pl<0?'loss-color':'')}`;
+                    document.getElementById('lblFibLevel').innerText = '全局状态'; document.getElementById('fibLevel').innerText = '并发中';
+                    
                     document.getElementById('lblTrigger').innerText = '当前目标';
-                    document.getElementById('targetProp').innerText = S.targetProp ? (S.targetProp === 'D' ? '抓 [双]' : '抓 [单]') : "观望找信号";
-                    document.getElementById('targetProp').className = S.targetProp ? 'cum-val win-color' : 'cum-val wait-color';
-
-                    document.getElementById('lblStreak').innerText = '宏观阵型';
+                    let t4 = S.targetProp ? (S.targetProp === 'A' ? '[庄]' : '[闲]') : '空';
+                    let t5 = S.targetProp ? (S.targetProp === 'D' ? '[双]' : '[单]') : '空';
+                    document.getElementById('targetProp').innerText = `4:${t4} 5:${t5}`;
+                    document.getElementById('targetProp').className = 'cum-val';
+                    
+                    document.getElementById('lblStreak').innerText = '大路阵型';
                     let macros = S.history.map(g => (g === 'BB' || g === 'PP') ? '双' : '单');
-                    let dispMac = macros.length > 0 ? macros.slice(-3).join('') : '-';
-                    document.getElementById('streakCount').innerText = dispMac;
+                    document.getElementById('streakCount').innerText = macros.length > 0 ? macros.slice(-3).join('') : '-';
                     document.getElementById('streakCount').className = 'cum-val';
                     document.getElementById('streakRate').style.display = 'none';
 
-                    document.getElementById('lblProgress').innerText = '大路接力模式 (INFINITE)';
-                    if (S.gameStatus === 'WON') {
-                        document.getElementById('regFill').style.width = '100%';
-                        document.getElementById('regFill').style.background = 'var(--win)';
-                        document.getElementById('regPercent').innerText = '已止盈';
-                    } else {
-                        document.getElementById('regFill').style.width = '100%';
-                        document.getElementById('regFill').style.background = 'linear-gradient(90deg, #0a84ff 0%, #32d74b 100%)';
-                        document.getElementById('regPercent').innerText = '无限循环';
-                    }
-                } 
-                else if (S.triggerMode === 'hand') {
-                    document.getElementById('lblTrigger').innerText = '当前阶段';
-                    let pName = S.s3State === 'PHASE1' ? 'P1(观望)' : (S.s3State === 'PHASE2' ? 'P2(一裁)' : 'P3(二裁)');
-                    document.getElementById('targetProp').innerText = pName;
-                    document.getElementById('targetProp').className = 'cum-val wait-color';
-
-                    document.getElementById('lblStreak').innerText = '攻击目标';
-                    document.getElementById('streakCount').innerText = S.s3Target ? (S.s3Target==='B'?'0(庄)':'1(闲)') : '-';
-                    document.getElementById('streakCount').className = S.s3Target ? (S.s3Target==='B'?'cum-val side-B':'cum-val side-P') : 'cum-val';
-                    document.getElementById('streakRate').style.display = 'none';
-
-                    document.getElementById('lblProgress').innerText = '连续手追踪模式 (INFINITE)';
-                    if (S.gameStatus === 'WON') {
-                        document.getElementById('regFill').style.width = '100%';
-                        document.getElementById('regFill').style.background = 'var(--win)';
-                        document.getElementById('regPercent').innerText = '已止盈';
-                    } else {
-                        document.getElementById('regFill').style.width = '100%';
-                        document.getElementById('regFill').style.background = 'linear-gradient(90deg, #0a84ff 0%, #32d74b 100%)';
-                        document.getElementById('regPercent').innerText = '无限循环';
-                    }
-                } 
-                else {
-                    document.getElementById('lblTrigger').innerText = S.triggerMode === 3 ? '目标(3连触发)' : '目标(2连触发)';
-                    document.getElementById('targetProp').innerText = S.targetProp ? (S.targetProp==='A'?'A (打0)':'B (打1)') : "无";
-                    document.getElementById('targetProp').className = S.targetProp ? (S.targetProp==='A'?'cum-val side-B':'cum-val side-P') : 'cum-val wait-color';
-
-                    document.getElementById('lblStreak').innerText = '连击层数';
-                    document.getElementById('streakCount').innerText = S.streak;
-                    document.getElementById('streakCount').className = S.streak >= 4 ? 'cum-val win-color' : 'cum-val';
-                    document.getElementById('streakRate').style.display = 'inline';
-
+                    document.getElementById('lblProgress').innerText = '双核永动机挂机模式 (无固定结束点)';
+                    document.getElementById('regFill').style.width = '100%'; document.getElementById('regFill').style.background = 'linear-gradient(90deg, #b043ff 0%, #0a84ff 100%)'; document.getElementById('regPercent').innerText = '无限';
+                } else {
+                    dualBox.style.display = 'none';
                     if (S.bettingMode === 'labouchere') {
-                        document.getElementById('lblProgress').innerText = '拉布谢尔追踪模式 (INFINITE)';
-                        if (S.gameStatus === 'WON') {
-                            document.getElementById('regFill').style.width = '100%';
-                            document.getElementById('regFill').style.background = 'var(--win)';
-                            document.getElementById('regPercent').innerText = '已止盈';
-                        } else {
-                            document.getElementById('regFill').style.width = '100%';
-                            document.getElementById('regFill').style.background = 'linear-gradient(90deg, #0a84ff 0%, #32d74b 100%)';
-                            document.getElementById('regPercent').innerText = '无限循环';
-                        }
+                        labBox.style.display = 'block'; document.getElementById('lblFibLevel').innerText = '消数余量'; document.getElementById('fibLevel').innerText = S.labouchereSeq.length + '项';
+                        document.getElementById('labouchereSeqText').innerText = S.labouchereSeq.length > 0 ? S.labouchereSeq.join(' - ') : '已清空 (等待重置)';
                     } else {
-                        document.getElementById('lblProgress').innerText = '16组窗口进度 (WINDOW PROGRESS)';
-                        if (S.gameStatus === 'WON') {
-                            document.getElementById('regFill').style.width = '100%';
-                            document.getElementById('regFill').style.background = 'var(--win)';
-                            document.getElementById('regPercent').innerText = '已止盈';
-                        } else {
-                            let progress = Math.min((S.group - 1 + (S.hand===2?0.5:0)) / 16 * 100, 100);
-                            document.getElementById('regFill').style.width = progress + '%';
-                            document.getElementById('regFill').style.background = 'linear-gradient(90deg, var(--accent) 0%, var(--win) 100%)';
-                            document.getElementById('regPercent').innerText = Math.floor(progress) + '%';
-                        }
+                        labBox.style.display = 'none'; document.getElementById('lblFibLevel').innerText = S.bettingMode === 'martingale' ? '注码(马丁)' : '注码(斐波)'; document.getElementById('fibLevel').innerText = S.fibIdx;
+                    }
+                    if (S.triggerMode === 5) {
+                        document.getElementById('lblTrigger').innerText = '当前目标'; document.getElementById('targetProp').innerText = S.targetProp ? (S.targetProp === 'D' ? '抓 [双]' : '抓 [单]') : "观望找信号";
+                        document.getElementById('targetProp').className = S.targetProp ? 'cum-val win-color' : 'cum-val wait-color';
+                        document.getElementById('lblStreak').innerText = '宏观阵型'; let macros = S.history.map(g => (g === 'BB' || g === 'PP') ? '双' : '单'); document.getElementById('streakCount').innerText = macros.length > 0 ? macros.slice(-3).join('') : '-';
+                        document.getElementById('streakRate').style.display = 'none';
+                        document.getElementById('lblProgress').innerText = '大路接力模式 (INFINITE)'; document.getElementById('regFill').style.width = '100%'; document.getElementById('regPercent').innerText = '无限循环';
+                    } else if (S.triggerMode === 'hand') {
+                        document.getElementById('lblTrigger').innerText = '当前阶段'; let pName = S.s3State === 'PHASE1' ? 'P1(观望)' : (S.s3State === 'PHASE2' ? 'P2(一裁)' : 'P3(二裁)');
+                        document.getElementById('targetProp').innerText = pName; document.getElementById('targetProp').className = 'cum-val wait-color';
+                        document.getElementById('lblStreak').innerText = '攻击目标'; document.getElementById('streakCount').innerText = S.s3Target ? (S.s3Target==='B'?'0(庄)':'1(闲)') : '-';
+                        document.getElementById('streakCount').className = S.s3Target ? (S.s3Target==='B'?'cum-val side-B':'cum-val side-P') : 'cum-val'; document.getElementById('streakRate').style.display = 'none';
+                        document.getElementById('lblProgress').innerText = '连续手追踪模式 (INFINITE)'; document.getElementById('regFill').style.width = '100%'; document.getElementById('regPercent').innerText = '无限循环';
+                    } else {
+                        document.getElementById('lblTrigger').innerText = S.triggerMode === 3 ? '目标(3连触发)' : '目标(2连触发)';
+                        document.getElementById('targetProp').innerText = S.targetProp ? (S.targetProp==='A'?'A (打0)':'B (打1)') : "无"; document.getElementById('targetProp').className = S.targetProp ? (S.targetProp==='A'?'cum-val side-B':'cum-val side-P') : 'cum-val wait-color';
+                        document.getElementById('lblStreak').innerText = '连击层数'; document.getElementById('streakCount').innerText = S.streak; document.getElementById('streakRate').style.display = 'inline';
+                        if (S.bettingMode === 'labouchere') { document.getElementById('lblProgress').innerText = '拉布谢尔追踪模式 (INFINITE)'; document.getElementById('regFill').style.width = '100%'; document.getElementById('regPercent').innerText = '无限循环'; } 
+                        else { document.getElementById('lblProgress').innerText = '16组窗口进度 (WINDOW PROGRESS)'; let progress = Math.min((S.group - 1 + (S.hand===2?0.5:0)) / 16 * 100, 100); document.getElementById('regFill').style.width = progress + '%'; document.getElementById('regPercent').innerText = Math.floor(progress) + '%'; }
                     }
                 }
 
                 document.getElementById('betCount').innerText = (wins + losses);
-                document.getElementById('wlStatsText').innerText = `胜: ${wins} | 负: ${losses} | 胜率: ${winRate}%`;
+                document.getElementById('wlStatsText').innerText = `胜: ${wins} | 负: ${losses} | 胜率: ${(wins+losses)>0 ? Math.round((wins/(wins+losses))*100):0}%`;
+                const wlList = document.getElementById('wlList'); wlList.innerHTML = S.wlHistory.slice(-150).map(item => `<span class="${item==='✅'?'wl-item-win':'wl-item-loss'}">${item}</span>`).join(''); wlList.scrollTop = wlList.scrollHeight;
                 
-                const wlList = document.getElementById('wlList');
-                const displayWL = S.wlHistory.slice(-150);
-                wlList.innerHTML = displayWL.map(item => `<span class="${item==='✅'?'wl-item-win':'wl-item-loss'}">${item}</span>`).join('');
-                wlList.scrollTop = wlList.scrollHeight;
+                // 播报台刷新
+                const logBox = document.getElementById('sysLogBox');
+                if (S.sysLogs && S.sysLogs.length > 0) {
+                    logBox.innerHTML = S.sysLogs.map(l => `<div class="log-entry">${l}</div>`).join('');
+                    logBox.scrollTop = logBox.scrollHeight;
+                }
 
                 let instr = getInstruction(S);
-                let infTag = (S.triggerMode === 'hand' || S.triggerMode === 5 || S.bettingMode === 'labouchere') ? ' (无限)' : '';
-                let displayGroup = (S.triggerMode === 'hand' || S.triggerMode === 5 || S.bettingMode === 'labouchere') ? S.group : Math.min(S.group, 16);
-                document.getElementById('phaseTag').innerText = `第 ${displayGroup} 组 | 位置 ${S.hand}${infTag}`;
-                
+                let infTag = (S.triggerMode === 'hand' || S.triggerMode === 5 || S.triggerMode === 6 || S.bettingMode === 'labouchere') ? ' (无限)' : '';
+                document.getElementById('phaseTag').innerText = `第 ${S.group} 组 | 位置 ${S.hand}${infTag}`;
                 let dir = document.getElementById('instrDir');
-                if (instr.amt === 0) { 
-                    dir.innerText = instr.msg; 
-                    dir.className = "side-Wait"; 
-                    document.getElementById('instrAmt').innerText = ""; 
-                } else {
-                    dir.innerText = instr.side === 'B' ? "庄(0)" : "闲(1)";
-                    dir.className = instr.side === 'B' ? "side-B" : "side-P";
-                    document.getElementById('instrAmt').innerText = instr.amt;
-                }
+                if (instr.amt === 0) { dir.innerText = instr.msg; dir.className = "side-Wait"; document.getElementById('instrAmt').innerText = ""; } 
+                else { dir.innerText = instr.side === 'B' ? "庄(0)" : "闲(1)"; dir.className = instr.side === 'B' ? "side-B" : "side-P"; document.getElementById('instrAmt').innerText = instr.amt; }
                 document.getElementById('instrDetail').innerText = instr.detail;
 
                 let html = "";
-                let displayRecords = S.records.slice(0, 60);
-                for(let i=0; i<displayRecords.length; i++) {
-                    let rec = displayRecords[i];
-                    html += `<tr>
-                        <td>G${rec.id}</td>
-                        <td style="font-weight:bold; color:#fff">${rec.h1 === 'B' ? '0' : (rec.h1 === 'P' ? '1' : '-')} , ${rec.h2 === 'B' ? '0' : (rec.h2 === 'P' ? '1' : '-')}</td>
-                        <td class="${rec.pl>0?'win-color':(rec.pl<0?'loss-color':'wait-color')}" style="font-size:11px">${rec.action || '-'}</td>
-                        <td class="${rec.totalPL>0?'win-color':(rec.totalPL<0?'loss-color':'wait-color')}" style="font-weight:bold">${rec.totalPL>0?'+':''}${rec.totalPL}</td>
-                    </tr>`;
+                for(let i=0; i<Math.min(S.records.length, 60); i++) {
+                    let rec = S.records[i];
+                    html += `<tr><td>G${rec.id}</td><td style="font-weight:bold; color:#fff">${rec.h1 === 'B' ? '0' : (rec.h1 === 'P' ? '1' : '-')} , ${rec.h2 === 'B' ? '0' : (rec.h2 === 'P' ? '1' : '-')}</td><td class="${rec.pl>0?'win-color':(rec.pl<0?'loss-color':'wait-color')}" style="font-size:11px">${rec.action || '-'}</td><td class="${rec.totalPL>0?'win-color':(rec.totalPL<0?'loss-color':'wait-color')}" style="font-weight:bold">${rec.totalPL>0?'+':''}${rec.totalPL}</td></tr>`;
                 }
                 document.getElementById('gameTable').innerHTML = html;
             });
@@ -932,25 +761,14 @@
 
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
-            let saveObj = { id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData };
-            let hist = JSON.parse(localStorage.getItem('bacc_v132_hist')||'[]');
-            hist.unshift(saveObj);
-            localStorage.setItem('bacc_v132_hist', JSON.stringify(hist.slice(0, 50)));
+            let hist = JSON.parse(localStorage.getItem('bacc_v14_hist')||'[]');
+            hist.unshift({ id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData });
+            localStorage.setItem('bacc_v14_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
-        function softResetEngine() {
-            S = createFreshState(S.triggerMode, S.bettingMode);
-            const { stack, ...dataToSave } = S;
-            localStorage.setItem('bacc_v132_session', JSON.stringify(dataToSave));
-        }
-
-        function resetGame() { 
-            if(confirm("确定要重置并清空所有数据吗？")) { 
-                softResetEngine();
-                updateUI(); 
-            } 
-        }
+        function softResetEngine() { S = createFreshState(S.triggerMode, S.bettingMode); autoSaveSession(); }
+        function resetGame() { if(confirm("确定要重置并清空所有数据吗？")) { softResetEngine(); updateUI(); } }
     </script>
 </body>
 </html>
