@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v14.5</title>
+    <title>Baccarat Sniper Max v14.6</title>
     <style>
         :root {
             --bg: #000000;
@@ -165,7 +165,6 @@
         .sim-textarea { width: 100%; height: 70px; padding: 10px; margin: 8px 0 15px 0; background: #111; border: 1px dashed #555; color: var(--accent); border-radius: 8px; box-sizing: border-box; font-size: 14px; font-family: monospace; outline: none; resize: none; }
         .sim-result-box { background: #2c2c2e; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: left; font-size: 14px; border: 1px solid #444; display: none; }
         
-        /* 随机面板专属样式 */
         .random-ctrl-box { display: flex; gap: 8px; align-items: center; margin-bottom: 5px; }
         .random-input { flex: 1; margin: 0 !important; background: #111 !important; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 6px; text-align: center; }
         .btn-random { background: #333; color: var(--accent); border: 1px solid #555; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
@@ -239,7 +238,7 @@
                 <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
                 <button class="btn-small" style="background:#0a84ff; color:#fff; border:none;" onclick="openSim()">🔬 模拟</button>
             </div>
-            <span class="app-title">Sniper Pro Max v14.5</span>
+            <span class="app-title">Sniper Pro Max v14.6</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -345,8 +344,8 @@
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v145_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v145_session');
+            if (localStorage.getItem('bacc_v146_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v146_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2; if(!S.bettingMode) S.bettingMode = 'fib';
@@ -363,22 +362,21 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v145_logged_in', 'true'); enterApp();
+                localStorage.setItem('bacc_v146_logged_in', 'true'); enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
 
         function enterApp() { document.getElementById('loginLayer').style.display = 'none'; document.getElementById('appLayer').style.display = 'flex'; updateUI(); }
-        function logout() { if(confirm("确定要退出吗？")) { localStorage.removeItem('bacc_v145_logged_in'); location.reload(); } }
+        function logout() { if(confirm("确定要退出吗？")) { localStorage.removeItem('bacc_v146_logged_in'); location.reload(); } }
         function openSettings() { document.getElementById('selStrategy').value = (S.triggerMode === 5 || S.triggerMode === 6 ? S.triggerMode : S.triggerMode) + '_' + S.bettingMode; document.getElementById('settingsLayer').style.display = 'flex'; }
         function closeSettings() { document.getElementById('settingsLayer').style.display = 'none'; }
         function openSim() { document.getElementById('simResult').style.display = 'none'; document.getElementById('simLayer').style.display = 'flex'; }
         function closeSim() { document.getElementById('simLayer').style.display = 'none'; }
 
-        // 🎲 随机生成数据
         function generateRandomData() {
             let countInput = document.getElementById('rndCount').value;
             let count = parseInt(countInput) || 10000;
-            if(count > 100000) { count = 100000; alert("为防止浏览器卡死，最大限制为 10 万手"); document.getElementById('rndCount').value = 100000; }
+            if(count > 100000) { count = 100000; alert("最大限制为 10 万手"); document.getElementById('rndCount').value = 100000; }
             let arr = [];
             for(let i=0; i<count; i++) { arr.push(Math.random() < 0.5 ? '0' : '1'); }
             document.getElementById('simInputText').value = arr.join('');
@@ -392,7 +390,7 @@
             closeSettings(); autoSaveSession(); updateUI();
         }
 
-        function autoSaveSession() { setTimeout(() => { const { stack, ...dataToSave } = S; localStorage.setItem('bacc_v145_session', JSON.stringify(dataToSave)); }, 0); }
+        function autoSaveSession() { setTimeout(() => { const { stack, ...dataToSave } = S; localStorage.setItem('bacc_v146_session', JSON.stringify(dataToSave)); }, 0); }
 
         function calculateBetAmount(st) {
             if (st.bettingMode === 'martingale') return Math.pow(2, Math.min(st.fibIdx, 20)); 
@@ -472,25 +470,35 @@
             return { side: null, amt: 0, msg: "观 望", detail: `等待 ${triggerName} 触发中...` };
         }
 
+        // 💡 修复：确保无论是否 WON，核心逻辑计算都在内部完成一次完整的交割
         function runCoreLogic(res, st) {
-            if (st.gameStatus !== 'PLAYING') return;
+            // 如果上个组已经标记为 WON，我们先进行强制清空记忆（仅针对单跑策略）
+            // 确保双核（策6）永远不清空全局 history，而是各自清空 paper
+            if (st.gameStatus === 'WON') {
+                if (st.triggerMode === 6) {
+                    st.gameStatus = 'PLAYING'; // 策6永远强制唤醒
+                } else {
+                    return; // 如果模拟器外部还没重置它，就直接返回，不吃这手残局牌
+                }
+            }
+
             let instr = getInstruction(st);
             let actionText = "观望";
 
             if (st.triggerMode === 6) {
-                if (instr.bust4) { st.c4_seq = [1,1,1]; st.c4_session_pl = 0; addSysLog(`🚨 【左脑策4】触发单边 -300 熔断割肉，已自动重生！`); } 
+                if (instr.bust4) { st.c4_seq = [1,1,1]; st.c4_session_pl = 0; addSysLog(`🚨 【左脑策4】触发单边 -300 熔断割肉！`); } 
                 else if (instr.raw4 && instr.raw4.amt > 0) {
                     let isWin = (instr.raw4.side === res);
                     if (isWin) { st.c4_pl += instr.raw4.amt; st.c4_session_pl += instr.raw4.amt; st.c4_seq.shift(); if(st.c4_seq.length>0) st.c4_seq.pop();
-                        if (st.c4_seq.length === 0) { st.c4_seq = [1,1,1]; st.c4_session_pl = 0; addSysLog(`✅ 【左脑策4】成功止盈 +3！已重新载入纸条。`); }
+                        if (st.c4_seq.length === 0) { st.c4_seq = [1,1,1]; st.c4_session_pl = 0; addSysLog(`✅ 【左脑策4】成功止盈 +3！`); }
                     } else { st.c4_pl -= instr.raw4.amt; st.c4_session_pl -= instr.raw4.amt; st.c4_seq.push(instr.raw4.amt); }
                 }
 
-                if (instr.bust5) { st.c5_seq = [1,1,1]; st.c5_session_pl = 0; addSysLog(`🚨 【右脑策5】触发单边 -300 熔断割肉，已自动重生！`); } 
+                if (instr.bust5) { st.c5_seq = [1,1,1]; st.c5_session_pl = 0; addSysLog(`🚨 【右脑策5】触发单边 -300 熔断割肉！`); } 
                 else if (instr.raw5 && instr.raw5.amt > 0) {
                     let isWin = (instr.raw5.side === res);
                     if (isWin) { st.c5_pl += instr.raw5.amt; st.c5_session_pl += instr.raw5.amt; st.c5_seq.shift(); if(st.c5_seq.length>0) st.c5_seq.pop();
-                        if (st.c5_seq.length === 0) { st.c5_seq = [1,1,1]; st.c5_session_pl = 0; addSysLog(`✅ 【右脑策5】成功止盈 +3！已重新载入纸条。`); }
+                        if (st.c5_seq.length === 0) { st.c5_seq = [1,1,1]; st.c5_session_pl = 0; addSysLog(`✅ 【右脑策5】成功止盈 +3！`); }
                     } else { st.c5_pl -= instr.raw5.amt; st.c5_session_pl -= instr.raw5.amt; st.c5_seq.push(instr.raw5.amt); }
                 }
 
@@ -517,11 +525,15 @@
             if(!st.flatHistory) st.flatHistory = []; st.flatHistory.push(res);
 
             if (st.hand === 1) {
-                st.currentH1Res = res; st.hand = 2; st.records.unshift({ id: st.group, h1: res, h2: '-', action: actionText, pl: st.groupPL, totalPL: st.totalPL, isComplete: false });
+                st.currentH1Res = res; st.hand = 2;
+                st.records.unshift({ id: st.group, h1: res, h2: '-', action: actionText, pl: st.groupPL, totalPL: st.totalPL, isComplete: false });
             } else {
+                // 💡 修复核心：组交割。只有走到这里，这一组才算真正结束。
                 let groupRes = st.currentH1Res + res; st.history.push(groupRes);
                 if(st.records.length > 0 && !st.records[0].isComplete) { st.records[0].h2 = res; st.records[0].action += (instr.amt>0 && st.triggerMode !== 6 ? `<br>打${instr.side==='B'?'0':'1'} [${instr.amt}] ${instr.side===res?'胜':'负'}` : (instr.amt>0 ? '' : `<br>观望`)); st.records[0].pl = st.groupPL; st.records[0].totalPL = st.totalPL; st.records[0].isComplete = true; }
+                
                 if (st.triggerMode === 5 || st.triggerMode === 6) { st.macroTarget = getMacroTarget(st.history); } 
+                
                 if (st.triggerMode !== 'hand' && st.triggerMode !== 5) {
                     let hasA = groupRes.includes('B'), hasB = groupRes.includes('P');
                     if (st.targetProp) { if ((st.targetProp === 'A' && hasA) || (st.targetProp === 'B' && hasB)) { st.streak++; if (st.streak >= 4 && st.bettingMode !== 'labouchere') st.gameStatus = 'WON'; } else { st.targetProp = null; st.streak = 0; } }
@@ -533,6 +545,7 @@
                     }
                 }
                 st.group++; st.hand = 1; st.currentH1Res = null; st.groupPL = 0;
+                
                 if (st.triggerMode !== 'hand' && st.triggerMode !== 5 && st.triggerMode !== 6 && st.bettingMode !== 'labouchere' && st.group > 16 && st.gameStatus === 'PLAYING') { st.gameStatus = 'GAMEOVER'; }
             }
 
@@ -549,7 +562,11 @@
             const btnB = document.querySelector('.bg-b'), btnP = document.querySelector('.bg-p');
             if(btnB && btnP) { btnB.classList.add('btn-disabled'); btnP.classList.add('btn-disabled'); }
             try {
-                if (S.gameStatus !== 'PLAYING') return;
+                if (S.gameStatus !== 'PLAYING') {
+                    // 如果单跑模式手动点出 WON，必须强制让用户点重置，不允许输入
+                    alert("当前局已结束，请点击右上角重置按钮开启新局！");
+                    return;
+                }
                 if (!S.stack) S.stack = [];
                 const { stack, ...snapshotData } = S; S.stack.push(JSON.stringify(snapshotData)); if (S.stack.length > 20) S.stack.shift(); 
                 runCoreLogic(res, S);
@@ -565,15 +582,13 @@
             finally { updateUI(); setTimeout(() => { isProcessing = false; }, 50); }
         }
 
-        // 📊 绘制谷峰走线图核心引擎
         function drawChart(data) {
             const canvas = document.getElementById('plChart');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
-            const W = canvas.width, H = canvas.height, P = 30; // 边距
+            const W = canvas.width, H = canvas.height, P = 30; 
             ctx.clearRect(0, 0, W, H);
             
-            // 安全寻找最大最小值 (防止超过调用栈)
             let maxPL = 0, minPL = 0, maxIdx = 0, minIdx = 0;
             for(let i=0; i<data.length; i++) {
                 if(data[i] > maxPL) { maxPL = data[i]; maxIdx = i; }
@@ -581,33 +596,29 @@
             }
             let range = maxPL - minPL || 1;
 
-            // 坐标映射
             const getX = (i) => P + (i / Math.max(data.length - 1, 1)) * (W - 2 * P);
             const getY = (v) => H - P - ((v - minPL) / range) * (H - 2 * P);
 
-            // 1. 画 0 轴虚线
             let zeroY = getY(0);
             ctx.beginPath(); ctx.strokeStyle = '#555'; ctx.setLineDash([5, 5]); ctx.lineWidth = 1;
             ctx.moveTo(P, zeroY); ctx.lineTo(W - P, zeroY); ctx.stroke(); ctx.setLineDash([]);
 
-            // 2. 画资金曲线
             ctx.beginPath();
-            ctx.strokeStyle = data[data.length-1] >= 0 ? '#32d74b' : '#ff453a'; // 终局赚钱是绿，亏钱是红
+            ctx.strokeStyle = data[data.length-1] >= 0 ? '#32d74b' : '#ff453a'; 
             ctx.lineWidth = 2; ctx.lineJoin = 'round';
             ctx.moveTo(getX(0), getY(data[0]));
             for(let i=1; i<data.length; i++) { ctx.lineTo(getX(i), getY(data[i])); }
             ctx.stroke();
 
-            // 3. 标记最高峰 (金黄)
             ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(getX(maxIdx), getY(data[maxIdx]), 5, 0, Math.PI*2); ctx.fill();
             ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
             ctx.fillText("▲ " + maxPL, getX(maxIdx), getY(data[maxIdx]) - 10);
 
-            // 4. 标记最深谷底 (赤红)
             ctx.fillStyle = '#ff453a'; ctx.beginPath(); ctx.arc(getX(minIdx), getY(data[minIdx]), 5, 0, Math.PI*2); ctx.fill();
             ctx.fillText("▼ " + minPL, getX(minIdx), getY(data[minIdx]) + 20);
         }
 
+        // 💡 修复：模拟器引擎的生命周期控制
         function runSimulation() {
             let rawStr = document.getElementById('simInputText').value.replace(/[^01]/g, '');
             if (!rawStr) { alert("没有检测到合法的序列！请先粘贴或生成。"); return; }
@@ -617,23 +628,30 @@
             let simBet = stratCombo[1];
             let simS = createFreshState(simTrig, simBet);
             let grandTotalPL = 0, resetCount = 0, betActionCount = 0;
-            
-            // 💡 记录 P/L 历史的数组
             let plHistory = [0];
 
             for (let i = 0; i < rawStr.length; i++) {
-                let mappedRes = rawStr[i] === '0' ? 'B' : 'P';
-                runCoreLogic(mappedRes, simS);
-                
-                // 每处理一手，记录当前累计真实盈亏
-                let liveBalance = grandTotalPL + simS.totalPL;
-                plHistory.push(liveBalance);
+                // 修复：只有当模拟器处于 PLAYING 状态时，才读取下一手牌
+                if (simS.gameStatus === 'PLAYING') {
+                    let mappedRes = rawStr[i] === '0' ? 'B' : 'P';
+                    runCoreLogic(mappedRes, simS);
+                    
+                    let liveBalance = grandTotalPL + simS.totalPL;
+                    plHistory.push(liveBalance);
+                }
 
-                if (simS.gameStatus !== 'PLAYING') { grandTotalPL += simS.totalPL; betActionCount += simS.wlHistory.length; resetCount++; simS = createFreshState(simTrig, simBet); }
+                // 修复：如果这手牌打完（无论第几手），状态变成了 WON。
+                // 必须在组内第 2 手（即 st.hand === 1，因为下一手是新的1）时，才允许发生物理重置！
+                // 这保证了即便第1手赢了，也能吃掉第2手，保持路单对齐。
+                if (simS.gameStatus !== 'PLAYING' && simS.hand === 1) { 
+                    grandTotalPL += simS.totalPL; 
+                    betActionCount += simS.wlHistory.length; 
+                    resetCount++; 
+                    simS = createFreshState(simTrig, simBet); 
+                }
             }
             if (simS.gameStatus === 'PLAYING') { grandTotalPL += simS.totalPL; betActionCount += simS.wlHistory.length; }
 
-            // 计算最大回撤 (从数组中找)
             let maxDrawdown = Math.min(...plHistory);
 
             let resBox = document.getElementById('simResult');
@@ -643,13 +661,12 @@
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:#aaa;">处理总手数:</span> <span>${rawStr.length} 手</span></div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:#aaa;">实际下注次数:</span> <span>${betActionCount} 次</span></div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="color:#aaa;">策略打通/重启次数:</span> <span>${resetCount} 次</span></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span style="color:#aaa;">资金最大回撤:</span> <span class="loss-color" style="font-weight:bold">${maxDrawdown} 分</span></div>
                 <div style="display:flex; justify-content:space-between; background:#111; padding:10px; border-radius:8px;"><span style="color:#fff; font-weight:bold;">最终净盈亏:</span> <span class="${colorCls}" style="font-size:20px; font-weight:900; font-family:monospace;">${grandTotalPL>0?'+':''}${grandTotalPL}</span></div>
                 <div style="margin-top: 15px; font-size:12px; color:#aaa; text-align:center;">资金走势曲线 (Equity Curve)</div>
                 <canvas id="plChart" width="600" height="260" style="width:100%; height:130px; border-radius:8px; background:#111; margin-top:5px; border: 1px solid #444;"></canvas>
             `;
             resBox.style.display = 'block';
-
-            // 渲染图表
             setTimeout(() => { drawChart(plHistory); }, 50);
         }
 
@@ -660,7 +677,7 @@
                 document.getElementById('totalPL').className = S.totalPL > 0 ? 'pl-value win-color' : (S.totalPL < 0 ? 'pl-value loss-color' : 'pl-value');
                 
                 let statusLabel = document.getElementById('gameStatusLabel');
-                if (S.gameStatus === 'WON') { statusLabel.innerText = "🎉 挑战成功 - 盈利收网离场"; statusLabel.style.color = "var(--win)"; } 
+                if (S.gameStatus === 'WON') { statusLabel.innerText = "🎉 挑战成功 - 请点击重置开启新局"; statusLabel.style.color = "var(--win)"; } 
                 else if (S.gameStatus === 'GAMEOVER') { statusLabel.innerText = "⚠️ 游戏结束 - 周期窗口耗尽"; statusLabel.style.color = "var(--loss)"; } 
                 else {
                     if (S.triggerMode === 6) { statusLabel.innerText = "🟣 套餐6运行中 - 双核并发对冲模式 (永动机)"; }
@@ -730,9 +747,9 @@
 
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
-            let hist = JSON.parse(localStorage.getItem('bacc_v145_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v146_hist')||'[]');
             hist.unshift({ id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData });
-            localStorage.setItem('bacc_v145_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v146_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
