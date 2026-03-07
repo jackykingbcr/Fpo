@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v15.1 (纯净实战版)</title>
+    <title>Baccarat Sniper Max v15.2 (极致注码版)</title>
     <style>
         :root {
             --bg: #000000;
@@ -179,7 +179,7 @@
             <h3 style="color:#fff; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px;">⚙️ 战术套餐设置</h3>
             <div class="modal-label">⚔️ 一键切换战术组</div>
             <select id="selStrategy" class="modal-input">
-                <option value="2_fib">套餐 1：2连触发 (AA/BB) + 斐波那契</option>
+                <option value="2_fib">套餐 1：2连触发 + 斐波那契 (三段变速注码)</option>
                 <option value="3_martingale">套餐 2：3连触发 (AAA/BBB) + 马丁格尔</option>
                 <option value="hand_martingale">套餐 3：连续手拦截 (000/0011) + 马丁格尔</option>
                 <option value="2_labouchere">套餐 4：2连触发 (AA/BB) + 拉布谢尔</option>
@@ -187,6 +187,7 @@
                 <option value="6_labouchere">套餐 6：双核对冲引擎 (策4 + 策5 并发)</option>
             </select>
             <div style="font-size: 11px; color: #888; text-align: left; margin-top: 5px; line-height: 1.4;">
+                * 套餐 1 独占【三段变速机制】及【+--+ 局部清零】。<br>
                 * 套餐 1-5 遵循原版机制（达标后请手动重置）。<br>
                 * 套餐 6 独占双核对冲无缝永动模式。
             </div>
@@ -202,7 +203,7 @@
             <div style="display:flex; gap:8px; z-index:2;">
                 <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
             </div>
-            <span class="app-title">Sniper Pro Max v15.1</span>
+            <span class="app-title">Sniper Pro Max v15.2</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -298,6 +299,7 @@
                 wlHistory: [], records: [], gameStatus: 'PLAYING', stack: [],
                 triggerMode: triggerMode, bettingMode: bettingMode, flatHistory: [],
                 s3State: 'PHASE1', s3Target: null, labouchereSeq: [1, 1, 1],
+                sessionPL: 0, betHistory: [], // 新增：单局流水与下注记录表（支持+--+逻辑）
                 c4_seq: [1, 1, 1], c4_pl: 0, c4_session_pl: 0,
                 c5_seq: [1, 1, 1], c5_pl: 0, c5_session_pl: 0,
                 sysLogs: ["系统已初始化就绪。"]
@@ -308,14 +310,16 @@
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v151_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v151_session');
+            if (localStorage.getItem('bacc_v152_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v152_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2; if(!S.bettingMode) S.bettingMode = 'fib';
                     if(!S.flatHistory) S.flatHistory = []; if(!S.stack) S.stack = [];
                     if(!S.c4_seq) { S.c4_seq=[1,1,1]; S.c4_pl=0; S.c5_seq=[1,1,1]; S.c5_pl=0; S.sysLogs=["系统更新完毕。"]; }
                     if(S.macroTarget === undefined) S.macroTarget = null;
+                    if(S.sessionPL === undefined) S.sessionPL = 0;
+                    if(S.betHistory === undefined) S.betHistory = [];
                 }
                 enterApp();
             }
@@ -325,12 +329,12 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v151_logged_in', 'true'); enterApp();
+                localStorage.setItem('bacc_v152_logged_in', 'true'); enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
 
         function enterApp() { document.getElementById('loginLayer').style.display = 'none'; document.getElementById('appLayer').style.display = 'flex'; updateUI(); }
-        function logout() { if(confirm("确定要退出吗？")) { localStorage.removeItem('bacc_v151_logged_in'); location.reload(); } }
+        function logout() { if(confirm("确定要退出吗？")) { localStorage.removeItem('bacc_v152_logged_in'); location.reload(); } }
         function openSettings() { document.getElementById('selStrategy').value = (S.triggerMode === 5 || S.triggerMode === 6 ? S.triggerMode : S.triggerMode) + '_' + S.bettingMode; document.getElementById('settingsLayer').style.display = 'flex'; }
         function closeSettings() { document.getElementById('settingsLayer').style.display = 'none'; }
 
@@ -342,7 +346,7 @@
             closeSettings(); autoSaveSession(); updateUI();
         }
 
-        function autoSaveSession() { setTimeout(() => { const { stack, ...dataToSave } = S; localStorage.setItem('bacc_v151_session', JSON.stringify(dataToSave)); }, 0); }
+        function autoSaveSession() { setTimeout(() => { const { stack, ...dataToSave } = S; localStorage.setItem('bacc_v152_session', JSON.stringify(dataToSave)); }, 0); }
 
         function calculateBetAmount(st) {
             if (st.bettingMode === 'martingale') return Math.pow(2, Math.min(st.fibIdx, 20)); 
@@ -449,12 +453,15 @@
                 if (instr.amt > 0) { let isWin = (instr.side === res); actionText = `合打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`; st.groupPL += (isWin ? instr.amt : -instr.amt); st.wlHistory.push(isWin ? '✅' : '❌'); }
             } 
             else {
-                // 💡 彻底恢复 1-5 原版机制
                 if (instr.amt > 0) {
                     let isWin = (instr.side === res);
                     st.wlHistory.push(isWin ? '✅' : '❌');
                     st.totalPL += (isWin ? instr.amt : -instr.amt);
                     st.groupPL += (isWin ? instr.amt : -instr.amt);
+                    st.sessionPL += (isWin ? instr.amt : -instr.amt);
+                    
+                    if (!st.betHistory) st.betHistory = [];
+                    st.betHistory.push({ amt: instr.amt, isWin: isWin, idx: st.fibIdx });
                     
                     if (st.bettingMode === 'labouchere') { 
                         if (isWin) { 
@@ -464,11 +471,53 @@
                             st.labouchereSeq.push(instr.amt); 
                         }
                         if (st.labouchereSeq.length === 0) st.gameStatus = 'WON'; 
-                    } else {
+                    } 
+                    else if (st.bettingMode === 'fib') {
+                        // 🌟 策略 1：斐波那契三段变速注码法
+                        if (st.sessionPL > 0) {
+                            st.gameStatus = 'WON';
+                            addSysLog(`🎯 成功打出正收益，请重置！`);
+                        } else {
+                            let specialTriggered = false;
+                            let bh = st.betHistory;
+                            let len = bh.length;
+
+                            // 触发 +--+ 局部清零
+                            if (len >= 4 && bh[len-4].isWin && !bh[len-3].isWin && !bh[len-2].isWin && bh[len-1].isWin) {
+                                st.fibIdx = bh[len-3].idx; // 回到+后的第一手
+                                specialTriggered = true;
+                                addSysLog(`⚡ 触发 +--+ 阵型！注码回到原点。`);
+                            } 
+                            // 触发开局 --+ 清零
+                            else if (len === 3 && !bh[len-3].isWin && !bh[len-2].isWin && bh[len-1].isWin && st.sessionPL === 0) {
+                                st.fibIdx = 0; 
+                                specialTriggered = true;
+                                addSysLog(`⚡ 触发 --+ 阵型！注码回到 1。`);
+                            }
+
+                            if (!specialTriggered) {
+                                if (!isWin) {
+                                    st.fibIdx++; // 输了必进1级
+                                } else {
+                                    let val = FIB[st.fibIdx];
+                                    if (val <= 13) {
+                                        st.fibIdx = Math.max(0, st.fibIdx - 1); // 浅水区退 1 级
+                                    } else if (val === 21 || val === 34) {
+                                        // 中水区停顿拉锯，原地踏步
+                                    } else {
+                                        st.fibIdx++; // 深水区胜进冲锋
+                                    }
+                                }
+                            }
+                            if (st.fibIdx >= FIB.length) st.fibIdx = FIB.length - 1; // 封顶保护
+                        }
+                    } 
+                    else {
+                        // 策略 2 和 3 (马丁格尔)
                         if (st.triggerMode === 'hand') { 
                             if (isWin) { 
                                 st.fibIdx = 0; st.s3State = 'PHASE1'; st.s3Target = null; 
-                                if (st.bettingMode !== 'labouchere' && st.totalPL > 0) st.gameStatus = 'WON'; 
+                                if (st.sessionPL > 0) st.gameStatus = 'WON'; 
                             } 
                             else { 
                                 st.fibIdx++; 
@@ -476,8 +525,7 @@
                                 else if (st.s3State === 'PHASE3') { st.s3State = 'PHASE1'; st.s3Target = null; } 
                             }
                         } else {
-                            // 💡 恢复 v13.2 灵魂：策略 1 和 2 是“连续过关缆”，只要下注就推进，无论输赢！
-                            st.fibIdx++; 
+                            st.fibIdx++; // 策略2：一直推进，直到连中4个达标
                         }
                     }
                     actionText = `打${instr.side==='B'?'0':'1'} [${instr.amt}] ${isWin?'胜':'负'}`;
@@ -500,7 +548,8 @@
                     if (st.targetProp) { 
                         if ((st.targetProp === 'A' && hasA) || (st.targetProp === 'B' && hasB)) { 
                             st.streak++; 
-                            if (st.streak >= 4 && st.bettingMode !== 'labouchere') st.gameStatus = 'WON'; 
+                            // 仅针对马丁格尔策略(策2)做4连击止盈，策1已通过盈亏判断止盈
+                            if (st.streak >= 4 && st.bettingMode === 'martingale') st.gameStatus = 'WON'; 
                         } else { 
                             st.targetProp = null; st.streak = 0; 
                         } 
@@ -608,12 +657,15 @@
                     } else {
                         document.getElementById('lblTrigger').innerText = S.triggerMode === 3 ? '目标(3连触发)' : '目标(2连触发)'; document.getElementById('targetProp').innerText = S.targetProp ? (S.targetProp==='A'?'A (打0)':'B (打1)') : "无"; document.getElementById('targetProp').className = S.targetProp ? (S.targetProp==='A'?'cum-val side-B':'cum-val side-P') : 'cum-val wait-color';
                         document.getElementById('lblStreak').innerText = '连击层数'; document.getElementById('streakCount').innerText = S.streak; document.getElementById('streakRate').style.display = 'inline';
-                        if (S.bettingMode === 'labouchere') { document.getElementById('lblProgress').innerText = '拉布谢尔无限循环追踪模式'; document.getElementById('regFill').style.width = '100%'; document.getElementById('regPercent').innerText = '无限'; } 
-                        else { 
+                        
+                        if (S.bettingMode === 'fib') { 
+                            document.getElementById('lblProgress').innerText = '16组窗口进度 (盈利率止盈)'; 
+                        } else {
                             document.getElementById('lblProgress').innerText = '16组窗口进度 (WINDOW PROGRESS)'; 
-                            if (S.gameStatus === 'WON') { document.getElementById('regFill').style.width = '100%'; document.getElementById('regPercent').innerText = '已完成'; } 
-                            else { let progress = Math.min((S.group - 1 + (S.hand===2?0.5:0)) / 16 * 100, 100); document.getElementById('regFill').style.width = progress + '%'; document.getElementById('regPercent').innerText = Math.floor(progress) + '%'; }
                         }
+                        
+                        if (S.gameStatus === 'WON') { document.getElementById('regFill').style.width = '100%'; document.getElementById('regPercent').innerText = '已完成'; } 
+                        else { let progress = Math.min((S.group - 1 + (S.hand===2?0.5:0)) / 16 * 100, 100); document.getElementById('regFill').style.width = progress + '%'; document.getElementById('regPercent').innerText = Math.floor(progress) + '%'; }
                     }
                 }
 
@@ -643,9 +695,9 @@
 
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
-            let hist = JSON.parse(localStorage.getItem('bacc_v151_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v152_hist')||'[]');
             hist.unshift({ id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData });
-            localStorage.setItem('bacc_v151_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v152_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
