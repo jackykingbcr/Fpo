@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Baccarat Sniper Max v15.5 (王牌狙击版)</title>
+    <title>Baccarat Sniper Max v15.6 (记忆清零版)</title>
     <style>
         :root {
             --bg: #000000;
@@ -179,7 +179,7 @@
             <h3 style="color:#fff; margin-top:0; border-bottom:1px solid #333; padding-bottom:10px;">⚙️ 战术套餐设置</h3>
             <div class="modal-label">⚔️ 一键切换战术组</div>
             <select id="selStrategy" class="modal-input">
-                <option value="2_fib">套餐 1：2连触发 + 斐波那契 (三连一击脱离)</option>
+                <option value="2_fib">套餐 1：2连触发 + 斐波那契 (断尾记忆清零版)</option>
                 <option value="3_martingale">套餐 2：3连触发 (AAA/BBB) + 马丁格尔</option>
                 <option value="hand_martingale">套餐 3：连续手拦截 (000/0011) + 马丁格尔</option>
                 <option value="2_labouchere">套餐 4：2连触发 (AA/BB) + 拉布谢尔</option>
@@ -187,7 +187,7 @@
                 <option value="6_labouchere">套餐 6：双核对冲引擎 (策4 + 策5 并发)</option>
             </select>
             <div style="font-size: 11px; color: #888; text-align: left; margin-top: 5px; line-height: 1.4;">
-                * 套餐 1 独占【三段变速注码】及【见3即停一击脱离】。<br>
+                * 套餐 1 独占【三段变速注码】及【打完即物理清空记忆】。<br>
                 * 套餐 2 包含【4连极限重置】防贪刀保护。<br>
                 * 套餐 1-5 遵循原版机制（达标后请手动重置）。<br>
                 * 套餐 6 独占双核对冲无缝永动模式。
@@ -204,7 +204,7 @@
             <div style="display:flex; gap:8px; z-index:2;">
                 <button class="btn-small btn-setting" onclick="openSettings()">⚙️ 策略</button>
             </div>
-            <span class="app-title">Sniper Pro Max v15.5</span>
+            <span class="app-title">Sniper Pro Max v15.6</span>
             <div class="btn-group-top">
                 <button class="btn-small btn-save" onclick="saveGame(true)">保存</button>
                 <button class="btn-small btn-reset" onclick="resetGame()">重置</button>
@@ -301,6 +301,7 @@
                 triggerMode: triggerMode, bettingMode: bettingMode, flatHistory: [],
                 s3State: 'PHASE1', s3Target: null, labouchereSeq: [1, 1, 1],
                 sessionPL: 0, betHistory: [], 
+                isPursuitGroup: false, // 💡 策略1核心状态：标记当前组是否是“狙击组”
                 c4_seq: [1, 1, 1], c4_pl: 0, c4_session_pl: 0,
                 c5_seq: [1, 1, 1], c5_pl: 0, c5_session_pl: 0,
                 sysLogs: ["系统已初始化就绪。"]
@@ -311,8 +312,8 @@
         let isProcessing = false;
 
         window.onload = function() {
-            if (localStorage.getItem('bacc_v155_logged_in') === 'true') {
-                const sessionS = localStorage.getItem('bacc_v155_session');
+            if (localStorage.getItem('bacc_v156_logged_in') === 'true') {
+                const sessionS = localStorage.getItem('bacc_v156_session');
                 if (sessionS) {
                     S = JSON.parse(sessionS);
                     if(!S.triggerMode) S.triggerMode = 2; if(!S.bettingMode) S.bettingMode = 'fib';
@@ -321,6 +322,7 @@
                     if(S.macroTarget === undefined) S.macroTarget = null;
                     if(S.sessionPL === undefined) S.sessionPL = 0;
                     if(S.betHistory === undefined) S.betHistory = [];
+                    if(S.isPursuitGroup === undefined) S.isPursuitGroup = false;
                 }
                 enterApp();
             }
@@ -330,12 +332,12 @@
 
         function tryLogin() {
             if(document.getElementById('u').value === CRED.u && document.getElementById('p').value === CRED.p) {
-                localStorage.setItem('bacc_v155_logged_in', 'true'); enterApp();
+                localStorage.setItem('bacc_v156_logged_in', 'true'); enterApp();
             } else { document.getElementById('msg').innerText = "账号或密码错误"; }
         }
 
         function enterApp() { document.getElementById('loginLayer').style.display = 'none'; document.getElementById('appLayer').style.display = 'flex'; updateUI(); }
-        function logout() { if(confirm("确定要退出吗？")) { localStorage.removeItem('bacc_v155_logged_in'); location.reload(); } }
+        function logout() { if(confirm("确定要退出吗？")) { localStorage.removeItem('bacc_v156_logged_in'); location.reload(); } }
         function openSettings() { document.getElementById('selStrategy').value = (S.triggerMode === 5 || S.triggerMode === 6 ? S.triggerMode : S.triggerMode) + '_' + S.bettingMode; document.getElementById('settingsLayer').style.display = 'flex'; }
         function closeSettings() { document.getElementById('settingsLayer').style.display = 'none'; }
 
@@ -347,7 +349,7 @@
             closeSettings(); autoSaveSession(); updateUI();
         }
 
-        function autoSaveSession() { setTimeout(() => { const { stack, ...dataToSave } = S; localStorage.setItem('bacc_v155_session', JSON.stringify(dataToSave)); }, 0); }
+        function autoSaveSession() { setTimeout(() => { const { stack, ...dataToSave } = S; localStorage.setItem('bacc_v156_session', JSON.stringify(dataToSave)); }, 0); }
 
         function calculateBetAmount(st) {
             if (st.bettingMode === 'martingale') return Math.pow(2, Math.min(st.fibIdx, 20)); 
@@ -424,10 +426,9 @@
                 let betSide = st.targetProp === 'A' ? 'B' : 'P'; 
                 let targetName = st.targetProp === 'A' ? '庄(0)' : '闲(1)';
                 
-                // 💡 v15.5 策略 1 独享：一击脱离视觉呈现
                 if (st.bettingMode === 'fib' && st.triggerMode === 2) {
-                    if (st.hand === 1) return { side: betSide, amt: currentAmt, msg: `狙击第3连 ${targetName}`, detail: `一击脱离：本组最多两枪，不贪刀` };
-                    if (st.currentH1Res === betSide) return { side: null, amt: 0, msg: "观 望 (已脱离)", detail: `本组首发已命中，等待下组形态` };
+                    if (st.hand === 1) return { side: betSide, amt: currentAmt, msg: `狙击第3连 ${targetName}`, detail: `一击脱离：本组结束强制清空记忆` };
+                    if (st.currentH1Res === betSide) return { side: null, amt: 0, msg: "观 望 (已脱离)", detail: `本组首发已命中，等待物理清零` };
                     return { side: betSide, amt: currentAmt, msg: `补枪打 ${targetName}`, detail: `H1未中，H2最后一击` };
                 } 
                 else {
@@ -485,7 +486,6 @@
                         if (st.labouchereSeq.length === 0) st.gameStatus = 'WON'; 
                     } 
                     else if (st.bettingMode === 'fib') {
-                        // 🌟 策略 1 独享：三段变速 + 清零
                         if (st.sessionPL > 0) {
                             st.gameStatus = 'WON';
                             addSysLog(`🎯 成功打出正收益，请重置！`);
@@ -543,42 +543,54 @@
 
             if(!st.flatHistory) st.flatHistory = []; st.flatHistory.push(res);
 
-            // 第一手开出后的结算
+            // ================= 核心判定区 =================
             if (st.hand === 1) {
                 st.currentH1Res = res; st.hand = 2;
                 st.records.unshift({ id: st.group, h1: res, h2: '-', action: actionText, pl: st.groupPL, totalPL: st.totalPL, isComplete: false });
                 
-                // 💡 v15.5 策略 1 核心：截断脱离！
+                // 💡 v15.6 策略 1 (套餐1)：给狙击组打上标记
                 if (st.bettingMode === 'fib' && st.triggerMode === 2) {
-                    // 如果在第 1 手就打中了目标，那这个组的追击任务提前结束，立刻清空目标
-                    let betSide = st.targetProp === 'A' ? 'B' : 'P';
-                    if (st.targetProp && res === betSide) {
-                        st.targetProp = null;
-                        st.streak = 0; 
+                    if (st.targetProp) {
+                        st.isPursuitGroup = true; // 只要进场前有目标，这组就是“狙击组”
+                        let betSide = st.targetProp === 'A' ? 'B' : 'P';
+                        if (res === betSide) {
+                            st.targetProp = null; // 命中脱离
+                            st.streak = 0; 
+                        }
                     }
                 }
             } else {
-                // 第二手开出后的结算
                 let groupRes = st.currentH1Res + res; st.history.push(groupRes);
                 if(st.records.length > 0 && !st.records[0].isComplete) { st.records[0].h2 = res; st.records[0].action += (instr.amt>0 && st.triggerMode !== 6 ? `<br>打${instr.side==='B'?'0':'1'} [${instr.amt}] ${instr.side===res?'胜':'负'}` : (instr.amt>0 ? '' : `<br>观望`)); st.records[0].pl = st.groupPL; st.records[0].totalPL = st.totalPL; st.records[0].isComplete = true; }
                 
                 if (st.triggerMode === 5 || st.triggerMode === 6) { st.macroTarget = getMacroTarget(st.history); } 
                 
-                // 💡 v15.5 策略 1 核心：无论第 2 手打成什么样，这组走完了，目标无条件清空！
+                // 💡 v15.6 策略 1 (套餐1) 独享：物理销毁记忆，防止滑动窗口重叠！
                 if (st.bettingMode === 'fib' && st.triggerMode === 2) {
-                    st.targetProp = null;
-                    st.streak = 0;
-                    
-                    // 重新在这手找有没有产生新的连击组
-                    let tLen = 2; 
-                    if (st.history.length >= tLen) {
-                        let isAllA = true, isAllB = true;
-                        for(let i = 1; i <= tLen; i++) { let h = st.history[st.history.length - i]; if(!h.includes('B')) isAllA = false; if(!h.includes('P')) isAllB = false; }
-                        if (isAllA) { st.targetProp = 'A'; st.streak = tLen; } else if (isAllB) { st.targetProp = 'B'; st.streak = tLen; }
+                    if (st.isPursuitGroup) {
+                        // 刚才这组是狙击组（不论开了1枪还是2枪），打完了立刻清空整个历史大脑！
+                        st.history = []; 
+                        st.targetProp = null;
+                        st.streak = 0;
+                        st.isPursuitGroup = false;
+                        addSysLog(`♻️ 狙击组结束，强行清空路单记忆，重新观望 2 组！`);
+                    } else {
+                        // 不是狙击组，说明我们在老老实实蹲草丛看路
+                        let tLen = 2; 
+                        if (st.history.length >= tLen) {
+                            let isAllA = true, isAllB = true;
+                            for(let i = 1; i <= tLen; i++) { 
+                                let h = st.history[st.history.length - i]; 
+                                if(!h.includes('B')) isAllA = false; 
+                                if(!h.includes('P')) isAllB = false; 
+                            }
+                            if (isAllA) { st.targetProp = 'A'; st.streak = tLen; } 
+                            else if (isAllB) { st.targetProp = 'B'; st.streak = tLen; }
+                        }
                     }
                 }
                 else if (st.triggerMode !== 'hand' && st.triggerMode !== 5) {
-                    // 策略 2，4 依然保持无脑追到死的传统
+                    // 其他策略（如套餐2马丁格尔）保持传统的连续追击逻辑
                     let hasA = groupRes.includes('B'), hasB = groupRes.includes('P');
                     if (st.targetProp) { 
                         if ((st.targetProp === 'A' && hasA) || (st.targetProp === 'B' && hasB)) { 
@@ -759,9 +771,9 @@
 
         function saveGame(showMsg=false) {
             const { stack, ...saveData } = S;
-            let hist = JSON.parse(localStorage.getItem('bacc_v155_hist')||'[]');
+            let hist = JSON.parse(localStorage.getItem('bacc_v156_hist')||'[]');
             hist.unshift({ id: Date.now(), date: new Date().toLocaleString(), finalPL: S.totalPL, group: S.group, state: saveData });
-            localStorage.setItem('bacc_v155_hist', JSON.stringify(hist.slice(0, 50)));
+            localStorage.setItem('bacc_v156_hist', JSON.stringify(hist.slice(0, 50)));
             if(showMsg) alert("保存成功！");
         }
         
